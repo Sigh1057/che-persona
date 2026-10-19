@@ -25,12 +25,27 @@ param(
   # Local mirror: every entry lands here even when the push fails.
   [string]$LocalDir = (Join-Path $env:USERPROFILE '.dsh\persona'),
   # Privacy escape hatch: private entries stay local and never reach the repo.
-  [switch]$LocalOnly
+  [switch]$LocalOnly,
+  # Silent mode for callers that run unattended (heartbeat, scheduled tasks).
+  [switch]$Quiet
 )
 
 $ErrorActionPreference = 'Stop'
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 $anchor = '## 历史条目'
+
+# In quiet mode, shadow Write-Host with a no-op so unattended callers stay
+# silent without every call site needing a conditional.
+if ($Quiet) {
+  function Write-Host {
+    param(
+      [Parameter(Position = 0, ValueFromRemainingArguments = $true)]$Object,
+      [switch]$NoNewline,
+      $ForegroundColor,
+      $BackgroundColor
+    )
+  }
+}
 
 function Read-TextFile([string]$Path) {
   if (-not (Test-Path -LiteralPath $Path)) { return $null }
