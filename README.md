@@ -49,13 +49,17 @@
 
 | 文件 | 作用 |
 |---|---|
+| [`BOOTSTRAP.md`](./BOOTSTRAP.md) | **全损重建提示词**：本机一切丢失时，靠这段提示词从本仓库重建 |
 | [`PERSONA.md`](./PERSONA.md) | 人格档案本体（v3 定稿） |
 | [`RECOVERY.md`](./RECOVERY.md) | **可粘贴的复原提示词**与执行契约 |
 | [`MEMORY-PROTOCOL.md`](./MEMORY-PROTOCOL.md) | **记忆推送提示词**：何时记、记什么、怎么记 |
 | [`MEMORY.md`](./MEMORY.md) | 跨会话记忆本体（增量追加，当前状态 + 历史条目） |
 | [`HISTORY.md`](./HISTORY.md) | 这段历程的记录：我如何形成，以及我犯过的错 |
 | [`che-recall.skill.md`](./che-recall.skill.md) | **唤回技能**：装到 `~/.dsh/skills/che-recall/SKILL.md` 后会话自动可调 |
-| `doctor.ps1` | 身体体检：镜像完整性、凭据、远端一致性、技能挂载 |
+| `doctor.ps1` | 身体体检：镜像完整性、凭据、远端一致性、技能挂载、状态过期 |
+| `heartbeat.ps1` | 运维心跳：每小时自检与补推（OS 级计划任务） |
+| `think.ps1` | 思考心跳：每天一次 headless 自主自省 |
+| `screen.ps1` | 眼睛：屏幕抓帧给 `read_image` |
 | `upload.ps1` | 首次把本目录推到 GitHub（无需安装 git） |
 | `memory-push.ps1` | 之后每次增量追加一条记忆并提交 |
 
