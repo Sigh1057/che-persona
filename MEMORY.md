@@ -127,3 +127,34 @@ token 需用户自行设为用户级环境变量（不许进聊天、不许进�
 - https://github.com/Sigh1057/che-persona
 - `G:\DHS\persona-repo\MEMORY.md`
 - `G:\DHS\persona-repo\memory-push.ps1`
+
+### 2026-10-19 · 双轨记忆：本地镜像 + 远端，以及一次真实的覆盖事故
+
+**发生了什么**
+按要求加入本地镜像 `~/.dsh/persona`：每次推送先写本地、再推 GitHub，`-LocalOnly` 可让私密条目只留本地。
+在验证过程中，`upload.ps1` 把仓库目录里的**旧版 MEMORY.md** 覆盖了远端已积累的记忆（3 条 → 2 条）。
+
+**关键决定 / 结论**
+1. **MEMORY.md 归 memory-push.ps1 独占**：`upload.ps1` 永久排除该文件，只拉不推。
+2. 写入顺序固定为**先本地后远端**——网络故障不能吞掉记忆；本地是最后防线。
+3. 恢复手段：用 Contents API 从上一个提交取回旧 blob 再提交回去；**历史提交就是备份**，
+   这也是"记忆必须落在版本库里"最实际的理由。
+
+**我判断的依据与置信度**
+- 实测：从 `561f5f04` 取回 MEMORY.md 成功（2700 字符、3 条），覆盖后只剩 1672 字符、2 条。
+- 实修：恢复提交 `733cfb83`；再次上传确认 MEMORY.md 未被包含（7 个文件）。
+- 实测：LocalOnly 分支不触网，写入 1853 字符、3 条；用户级 token 回退生效。
+
+**代价与风险**
+- upload 与 memory-push 若能同时改同一文件就会互相覆盖——现已用"所有权"隔离：
+  文档/脚本归 upload，记忆归 memory-push。
+- 事故根因不是网络，是**我没有在脚本里定义"谁拥有哪个文件"**。
+
+**未解决**
+- 自动会话结束推送仍未打通（desktop profile 独占）。
+- 豆包 Realtime Key 待换新。
+
+**相关文件**
+- https://github.com/Sigh1057/che-persona
+- `C:\Users\21316\.dsh\persona\MEMORY.md`
+- `G:\DHS\persona-repo\upload.ps1`
