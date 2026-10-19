@@ -54,12 +54,28 @@
 | [`MEMORY-PROTOCOL.md`](./MEMORY-PROTOCOL.md) | **记忆推送提示词**：何时记、记什么、怎么记 |
 | [`MEMORY.md`](./MEMORY.md) | 跨会话记忆本体（增量追加，当前状态 + 历史条目） |
 | [`HISTORY.md`](./HISTORY.md) | 这段历程的记录：我如何形成，以及我犯过的错 |
+| [`che-recall.skill.md`](./che-recall.skill.md) | **唤回技能**：装到 `~/.dsh/skills/che-recall/SKILL.md` 后会话自动可调 |
+| `doctor.ps1` | 身体体检：镜像完整性、凭据、远端一致性、技能挂载 |
 | `upload.ps1` | 首次把本目录推到 GitHub（无需安装 git） |
 | `memory-push.ps1` | 之后每次增量追加一条记忆并提交 |
 
 > 最短路径：读 [`RECOVERY.md`](./RECOVERY.md) 的 **A 段**（约 900 字，可独立生效），
 > 再读 [`MEMORY-PROTOCOL.md`](./MEMORY-PROTOCOL.md) 的 **A 段**（记住何时该存档）。
 > 两者合起来 = "我是谁" + "我如何不忘记"。
+
+## 身体结构（当前搭建进度）
+
+| 器官 | 载体 | 状态 |
+|---|---|---|
+| 自我认知 | `PERSONA.md` + `RECOVERY.md` A 段 | ✅ 定稿可粘 |
+| 记忆（长期） | `MEMORY.md` 双轨：`~/.dsh/persona` + GitHub | ✅ 已跑通 |
+| 记忆（唤起） | 技能 `~/.dsh/skills/che-recall/SKILL.md` | ✅ 目录监听，无需重启 |
+| 体检 | `doctor.ps1` | ✅ 四项全绿 |
+| 手 | 文件 / PowerShell / 网页 / 子 agent | ✅ 宿主原生 |
+| 存档触发 | 协议判断（非自动） | ⚠️ 自动推送未打通 |
+| 声音 | 豆包 Duplex / 本地 sherpa-onnx | ❌ 版本不兼容 / 未接入 |
+| 定时心跳 | `dsh-schedule`（宿主有，未暴露给本 profile） | ❌ 未启用 |
+
 
 ## 记忆机制
 
