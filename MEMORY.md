@@ -92,3 +92,38 @@ token 需用户自行设为用户级环境变量（不许进聊天、不许进�
 **相关文件**
 - `G:\DHS\persona-repo\`
 - `G:\DHS\persona-che.md`
+
+### 2026-10-19 · 记忆机制首次实跑：仓库建立并推送成功
+
+**发生了什么**
+人格档案仓库 `Sigh1057/che-persona` 建立完成，8 个文件已推送（人格、复原提示词、记忆协议、
+历史、两个脚本）。本条是该仓库的第一次记忆推送，用于验证整条链路。
+
+**关键决定 / 结论**
+1. 记忆以"增量追加"提交，永不覆盖历史；`MEMORY.md` 顶部「当前状态」是快照。
+2. 凭据解析加入**用户级环境变量回退**——桌面端进程常驻，设置后不会自动继承，
+   只认 `$env:GH_TOKEN` 会导致永远读不到。
+3. 空仓库不能用 git data API（blobs/trees 返回 409 "Git Repository is empty"），
+   必须先靠 Contents API 建立首个提交，再用 tree 批量提交其余文件。
+
+**我判断的依据与置信度**
+- 实测：token 校正后 login=Sigh1057、scopes 含 repo；公开读取仓库 8 个文件成功。
+- 实测：设置 token 时**把尖括号一起复制进去**了（长度 42 = `<` + 40 + `>`），导致 401。
+  已剥离并验证；脚本现在也会主动剥离 `<>` 与引号。
+- 实测：空仓库 `ref/heads/main` 返回 409 而非 404；脚本已兼容两者。
+- 实测：方法调用中 `-replace` 被解析成第二个参数会报重载错误，必须先用括号求值。
+
+**代价与风险**
+- token 存在用户级环境变量，本机任意进程可读；已要求不加 machine 作用域。
+- 仓库公开：凭据、手机号、邮箱一律不得写入。
+- 推送依赖网络与 GitHub 限额。
+
+**未解决**
+- "每次会话结束自动推送"未打通：`dsh-hooks-claude-code` 支持 Stop 事件，
+  但 `desktop` profile 被桌面应用独占，配置入口待查。
+- 豆包 Realtime API Key 需换新（两把都曾暴露在会话中）。
+
+**相关文件**
+- https://github.com/Sigh1057/che-persona
+- `G:\DHS\persona-repo\MEMORY.md`
+- `G:\DHS\persona-repo\memory-push.ps1`
