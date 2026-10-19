@@ -26,6 +26,10 @@ param(
   [string]$LocalDir = (Join-Path $env:USERPROFILE '.dsh\persona'),
   # Privacy escape hatch: private entries stay local and never reach the repo.
   [switch]$LocalOnly,
+  # Replaces the "## 当前状态" section body before writing. The header claims
+  # this section is overwritten on every push, so leaving it unset kept the
+  # status frozen at an old date.
+  [string]$State = '',
   # Unattended mode for callers that cannot see console output (heartbeat,
   # scheduled tasks). It suppresses the success narration but NEVER hides an
   # error: failures still write to stderr and set $LASTEXITCODE-compatible state.
@@ -68,6 +72,22 @@ function Add-Entry([string]$Base, [string]$Entry) {
   return $Base.TrimEnd() + "`n`n$Entry`n"
 }
 
+# Replaces the body of the "## 当前状态" section (between its heading line and
+# the next standalone '---'), which the header claims is overwritten on every
+# push. Before this existed the section silently went stale — the first
+# unattended self-check caught it.
+function Set-CurrentState([string]$Base, [string]$StateText) {
+  if ([string]::IsNullOrWhiteSpace($Base) -or [string]::IsNullOrWhiteSpace($StateText)) { return $Base }
+  $pattern = '(?ms)^(##\s*当前状态[^\r\n]*\r?\n)(.*?)(^---\s*$)'
+  if (-not [regex]::IsMatch($Base, $pattern)) { return $Base }
+  $body = $StateText.Trim()
+  return [regex]::Replace($Base, $pattern, {
+      param($m)
+      $m.Groups[1].Value + "`n" + $body + "`n`n" + $m.Groups[3].Value
+    }, 1)
+}
+
+
 # --- 1) entry text -----------------------------------------------------------
 if ($PSCmdlet.ParameterSetName -eq 'File') {
   if (-not (Test-Path -LiteralPath $ContentFile)) { throw "找不到内容文件：$ContentFile" }
@@ -91,12 +111,13 @@ if ($null -eq $localBase) {
   if ($null -ne $localBase) { Narrate "本地镜像无 MEMORY.md，使用仓库种子：$($localBase.Length) 字符" }
 }
 $localUpdated = Add-Entry $localBase $body
+if (-not [string]::IsNullOrWhiteSpace($State)) { $localUpdated = Set-CurrentState $localUpdated $State }
 Write-TextFile $localMemory $localUpdated
 Narrate (("本地已写入：{0}（{1} 字符）" -f $localMemory, $localUpdated.Length)) 'Green'
 
 if ($LocalOnly) {
   Narrate ''
-  Narrate ("已记录（仅本地）：$subject") ''Yellow''
+  Narrate ("已记录（仅本地）：$subject") 'Yellow'
   Narrate '本条未推送到公开仓库（-LocalOnly）。'
   Narrate "位置：$localMemory"
   return
@@ -194,6 +215,9 @@ if ($remoteText -and $remoteText.Length -gt $localUpdated.Length -and $remoteTex
     $pushText = $remoteText
   }
 }
+# The state section is applied to whatever document actually gets pushed, so a
+# merge against a longer remote copy cannot silently drop the refresh.
+if (-not [string]::IsNullOrWhiteSpace($State)) { $pushText = Set-CurrentState $pushText $State }
 
 $payload = @{
   message = "memory: $subject"

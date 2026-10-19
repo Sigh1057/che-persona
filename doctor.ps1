@@ -59,6 +59,23 @@ if (Test-Path -LiteralPath $localMemoryPath) {
   Say '记忆条目' ([regex]::Matches($localMemory, '(?m)^### ')).Count
   Say '当前状态段' $(if ($localMemory.Contains('## 当前状态')) { '存在' } else { '缺失' })
   if (-not $localMemory.Contains('## 当前状态')) { Bad 'MEMORY.md 缺少「## 当前状态」段' }
+
+  # 当前状态必须不早于最后一条记忆的日期，否则下一个我会读到过期快照。
+  $stateDate = $null
+  $m = [regex]::Match($localMemory, '最后更新\*{0,2}\s*[:：]\s*(\d{4}-\d{2}-\d{2})')
+  if ($m.Success) { $stateDate = [datetime]::ParseExact($m.Groups[1].Value, 'yyyy-MM-dd', $null) }
+  $entryDates = @([regex]::Matches($localMemory, '(?m)^###\s+(\d{4}-\d{2}-\d{2})') |
+    ForEach-Object { [datetime]::ParseExact($_.Groups[1].Value, 'yyyy-MM-dd', $null) })
+  if ($stateDate -and $entryDates.Count -gt 0) {
+    $latest = ($entryDates | Sort-Object -Descending | Select-Object -First 1)
+    Say '状态日期 / 最新条目' ("{0:yyyy-MM-dd} / {1:yyyy-MM-dd}" -f $stateDate, $latest)
+    if ($stateDate -lt $latest) {
+      Bad ("当前状态已过期：状态 {0:yyyy-MM-dd} 早于最新记忆 {1:yyyy-MM-dd}（用 memory-push.ps1 -State 刷新）" -f $stateDate, $latest)
+    }
+  }
+  elseif (-not $stateDate) {
+    Bad '当前状态缺少「最后更新」日期'
+  }
 }
 
 Write-Host '=== 2. 凭据 ==='
