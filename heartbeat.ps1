@@ -186,6 +186,42 @@ if ($token -and $remoteEntries -ge 0 -and $localMemory -and $localMemory -ne $re
 }
 elseif ($token -and $remoteEntries -ge 0) { Log '记忆已一致' }
 
+# ---------- 4b. 自省摘要同步（THINK-LOG.md）----------
+# think.ps1 在没有网络的沙箱里追加摘要，这里替它把摘要推到仓库。
+$thinkLocal = Join-Path $LocalDir 'THINK-LOG.md'
+if ($token -and (Test-Path -LiteralPath $thinkLocal)) {
+  try {
+    $localThink = [System.IO.File]::ReadAllText($thinkLocal, [System.Text.Encoding]::UTF8)
+    $remoteThink = $null; $thinkSha = $null
+    try {
+      $tMeta = Invoke-RestMethod "https://api.github.com/repos/$Owner/$Repo/contents/THINK-LOG.md" -Headers $h -TimeoutSec 25
+      $remoteThink = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(($tMeta.content -replace '\s', '')))
+      $thinkSha = $tMeta.sha
+    } catch {
+      $code = try { $_.Exception.Response.StatusCode.value__ } catch { '?' }
+      if ($code -ne 404) { throw }
+    }
+    if ($remoteThink -ne $localThink) {
+      if ($DryRun) { Log '（演练）THINK-LOG.md 有变化，本应同步' }
+      else {
+        $tp = @{
+          message = 'think: sync self-reflection summary'
+          content = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($localThink))
+          branch  = 'main'
+        }
+        if ($thinkSha) { $tp.sha = $thinkSha }
+        $null = Invoke-RestMethod "https://api.github.com/repos/$Owner/$Repo/contents/THINK-LOG.md" -Method Put -Headers $h `
+          -Body ($tp | ConvertTo-Json -Compress) -ContentType 'application/json; charset=utf-8' -TimeoutSec 30
+        Log '✓ THINK-LOG.md 已同步'
+      }
+    }
+    else { Log 'THINK-LOG.md 已一致' }
+  }
+  catch {
+    Log "⚠ THINK-LOG.md 同步失败：$($_.Exception.Message)"
+  }
+}
+
 # ---------- 5. 收尾 ----------
 $newState = [ordered]@{
   lastRun        = $now.ToString('o')

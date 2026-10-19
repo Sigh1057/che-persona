@@ -136,5 +136,55 @@ try {
   if ($all.Count -gt 300) { Set-Content -LiteralPath $LogPath -Value ($all | Select-Object -Last 300) -Encoding UTF8 }
 } catch { }
 
+# --- 摘要行：进 THINK-LOG.md，随仓库跨机器追溯 -------------------------------
+# 完整报告（含模型推理原文）留在本机 reports/；只把一行摘要交给版本库，
+# 避免 git 历史被推理过程撑爆，也避免把本机路径细节带到公开仓库。
+function Get-Advice([string]$path) {
+  if (-not (Test-Path -LiteralPath $path)) { return '' }
+  $body = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
+  if ($body -match '无异常') { return '无异常' }
+  # 取「建议」小节后的第一行有效文字
+  $lines = $body -split "`r?`n"
+  for ($i = 0; $i -lt $lines.Count; $i++) {
+    if ($lines[$i] -match '^#{1,4}.*建议') {
+      for ($j = $i + 1; $j -lt [Math]::Min($i + 6, $lines.Count); $j++) {
+        $t = $lines[$j].Trim().TrimStart('-', '*', ' ')
+        if ($t.Length -gt 0) { return ($t.Substring(0, [Math]::Min(90, $t.Length))) }
+      }
+    }
+  }
+  return '（见本地报告）'
+}
+
+$advice = Get-Advice $reportPath
+$summaryLine = ('- {0} — {1} — {2}s — {3} — {4}' -f $now.ToString('yyyy-MM-dd HH:mm'), $status, $elapsed, $advice, (Split-Path $reportPath -Leaf))
+$logDoc = @(
+  '# THINK-LOG.md — 自省摘要',
+  '',
+  '> 每天一次自主自省的一行摘要。完整报告（含推理原文）只留在本机 `reports/`。',
+  '> 由 `think.ps1` 追加，由 `heartbeat.ps1` 在有网络时同步到本仓库。',
+  '',
+  '## 记录',
+  ''
+) -join "`n"
+foreach ($target in @((Join-Path $LocalDir 'THINK-LOG.md'), 'G:\DHS\persona-repo\THINK-LOG.md')) {
+  try {
+    $existing = if (Test-Path -LiteralPath $target) { [System.IO.File]::ReadAllText($target, [System.Text.Encoding]::UTF8) } else { $logDoc }
+    $updated = $existing.TrimEnd() + "`n" + $summaryLine + "`n"
+    # 只保留最近 200 条摘要
+    $rows = @($updated -split "`r?`n" | Where-Object { $_ -match '^- \d{4}-\d{2}-\d{2}' })
+    if ($rows.Count -gt 200) {
+      $head = @($updated -split "`r?`n" | Where-Object { $_ -notmatch '^- \d{4}-\d{2}-\d{2}' })
+      $updated = (($head -join "`n").TrimEnd()) + "`n" + (($rows | Select-Object -Last 200) -join "`n") + "`n"
+    }
+    $dir = Split-Path -Parent $target
+    if ($dir -and -not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+    [System.IO.File]::WriteAllText($target, $updated, $utf8)
+  } catch {
+    if (-not $Quiet) { Write-Host "  摘要写入失败（$target）：$($_.Exception.Message)" }
+  }
+}
+if (-not $Quiet) { Write-Host "  摘要已追加: $summaryLine" }
+
 Say "  结果：$status（${elapsed}s）"
 Say "  报告：$reportPath"
