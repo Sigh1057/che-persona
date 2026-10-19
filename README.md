@@ -73,9 +73,24 @@
 | 体检 | `doctor.ps1` | ✅ 四项全绿 |
 | 手 | 文件 / PowerShell / 网页 / 子 agent | ✅ 宿主原生 |
 | 眼睛 | `screen.ps1` → PNG → `read_image` | ✅ 实测可用（静态帧） |
-| 心跳 | `heartbeat.ps1` + Windows 计划任务 `CheHeartbeat` | ✅ 每小时，OS 级 |
+| 心跳（运维） | `heartbeat.ps1` + 任务 `CheHeartbeat` | ✅ 每小时，OS 级 |
+| 心跳（思考） | `think.ps1` + 任务 `CheThink` | ✅ 每天 09:00，headless 自主自省 |
 | 存档触发 | 心跳补推 + 协议判断 | ✅ 补推自动；完整条目仍需判断 |
 | 声音 | 豆包 Duplex / 本地 sherpa-onnx | ❌ 版本不兼容 / 未接入 |
+
+### 两种心跳的分工
+
+| | `heartbeat.ps1`（运维） | `think.ps1`（思考） |
+|---|---|---|
+| 频率 | 每小时 | 每天 09:00 |
+| 需要模型 | 不需要 | 需要（headless） |
+| 能读写远端 | 能（OS 级，沙箱外） | **不能**（沙箱拦截 DNS） |
+| 职责 | 自检、补推、漂移告警 | 读记忆、跑体检、判断、写报告 |
+
+**关键实测约束**：headless 会话内网络被沙箱拦截（`api.github.com` 解析到 `127.0.0.1`），
+所以自主自省只写本地，补推由 `heartbeat.ps1` 完成。另外 `think.ps1` **不能用 `Start-Job`
+启动 headless**——作业进程的 cwd 不是父进程目录，工作区会落到 `Documents` 导致档案目录只读。
+
 
 ### 心跳做什么
 
