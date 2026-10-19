@@ -191,3 +191,31 @@ token 需用户自行设为用户级环境变量（不许进聊天、不许进�
 - `C:\Users\21316\.dsh\skills\che-recall\SKILL.md`
 - `C:\Users\21316\.dsh\persona\doctor.ps1`
 - https://github.com/Sigh1057/che-persona
+
+### 2026-10-19 · 长出眼睛：屏幕捕获实测可用（静态帧）
+
+**发生了什么**
+新增 `screen.ps1`：把屏幕抓成 PNG 存盘，再用 `read_image` 读取。实测三种模式全部通过。
+
+**关键决定 / 结论**
+1. "看屏幕"= **离散快照**，不是视频流。要连续观察必须循环抓帧，代价高且无必要。
+2. 抓帧走 `Graphics.CopyFromScreen`，主屏约 150ms；`-Foreground` 用 Win32 `GetWindowRect`，约 220ms。
+3. 默认缩放（`-MaxWidth`）控制体积，因为 `read_image` 会把大图降采样，细节靠区域裁剪保。
+
+**我判断的依据与置信度**
+- 实测：主屏 2560x1440→1280x720，153ms，253KB。
+- 实测：全屏拼接 4267x1440→1600x540，149ms，997KB（两屏：DISPLAY2 主 2560x1440；DISPLAY1 1707x1067，150% 缩放）。
+- 实测：前台窗口 2576x1408（含边框偏移 -8,-8），219ms。
+- 未验证：锁屏 / RDP 断开时的行为；DRM 内容是否黑屏。
+
+**代价与风险**
+- 截屏会包含屏幕上的一切——输入框里的密码、私信、其他窗口。**默认不主动看，需要对方明确要求。**
+- 抓一次就落一个 PNG 文件，需自行清理（默认写到 %TEMP%）。
+
+**未解决**
+- 看不到鼠标指针（CopyFromScreen 不含光标）；做 UI 指引时是硬伤。
+- 自动触发 / 定时观察未接入。
+
+**相关文件**
+- `C:\Users\21316\.dsh\persona\screen.ps1`
+- https://github.com/Sigh1057/che-persona
