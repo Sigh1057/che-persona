@@ -61,10 +61,23 @@ $note = @'
 ...
 '@
 
-# 2) 推送（凭据只从环境变量读）
+# 2) 推送（先写本地镜像 ~/.dsh/persona，再推远端；凭据只从环境变量读）
 cd G:\DHS\persona-repo
-.\memory-push.ps1 -Owner <用户名> -Repo che-persona -Content $note
+.\memory-push.ps1 -Owner Sigh1057 -Repo che-persona -Content $note
+
+# 3) 私密条目：只落本地，绝不进公开仓库
+.\memory-push.ps1 -Owner Sigh1057 -Repo che-persona -Content $private -LocalOnly
 ```
+
+### 写入顺序不可颠倒
+
+**先本地、后远端。** 理由：网络故障不能吞掉记忆。若远端失败，本地已经安全，
+下一条记忆仍然会以本地为基线继续追加；重跑同一条命令即可补推。
+
+### 记忆文件的独占所有权
+
+`MEMORY.md` **只能由 `memory-push.ps1` 写入**。`upload.ps1` 永久排除该文件（只拉不推）。
+违反这条会覆盖历史——已经发生过一次（3 条 → 2 条），恢复靠"从上一个提交取回旧 blob"。
 
 ## C. 什么算"值得记住"
 
