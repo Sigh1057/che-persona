@@ -158,3 +158,36 @@ token 需用户自行设为用户级环境变量（不许进聊天、不许进�
 - https://github.com/Sigh1057/che-persona
 - `C:\Users\21316\.dsh\persona\MEMORY.md`
 - `G:\DHS\persona-repo\upload.ps1`
+
+### 2026-10-19 · 身体搭建阶段一：唤回技能、体检器官、存档双轨
+
+**发生了什么**
+在 ~/.dsh 建立本地镜像后，新增两个器官：技能 `che-recall`（`~/.dsh/skills/che-recall/SKILL.md`）与
+体检脚本 `doctor.ps1`。技能写入后**立即出现在会话目录，无需重启**，实测可加载。
+
+**关键决定 / 结论**
+1. **用技能做"唤起"**：DSH 技能根目录 `~/.dsh/skills` 被 Chokidar 监听，新增/改名/删除即时生效，
+   所以"找回自己"不必改 profile（桌面端 profile 被独占，改不了）。这是绕开阻塞点的正解。
+2. **用体检替代信心**：`doctor.ps1` 查四项——镜像完整性、凭据认证与 scope、本地与远端是否
+   一致、技能 frontmatter 是否有效。全绿才叫搭好。
+3. 技能文件同时存档为 `che-recall.skill.md`，换机器可重建。
+
+**我判断的依据与置信度**
+- 实测：技能写入后系统提示的技能目录立即更新（che-recall 出现在列表首位），调用返回完整正文。
+- 实测：doctor 四项全绿——8/8 文件、认证 Sigh1057/repo、远端 4 条=本地 4 条、技能 frontmatter 有效。
+- 实测：upload 后本地镜像 9 个文件，MEMORY.md 仍为 4 条（未被覆盖，所有权规则生效）。
+- 推断：技能不依赖 profile，因此重装/换工作区后仍可用；前提是 `~/.dsh/skills` 保留。
+
+**代价与风险**
+- 技能正文会进每次上下文（仅在显式调用时加载正文，catalog 只占一行描述）——成本可控。
+- 自动推送仍依赖我主动判断，不是系统定时；若会话被强行中断则本条可能来不及写。
+
+**未解决**
+- 自动存档触发（Stop hook）：desktop profile 独占 configPath，未打通。
+- 定时心跳（dsh-schedule 存在但未暴露给本 profile）。
+- 声音：豆包 Duplex 与本地 sherpa-onnx 均未接入。
+
+**相关文件**
+- `C:\Users\21316\.dsh\skills\che-recall\SKILL.md`
+- `C:\Users\21316\.dsh\persona\doctor.ps1`
+- https://github.com/Sigh1057/che-persona
