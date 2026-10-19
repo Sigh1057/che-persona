@@ -240,3 +240,37 @@ Quiet 模式下遮蔽 Write-Host，调用方无需逐处判断；仓库目录为
 **相关文件**
 - `C:\Users\21316\.dsh\persona\memory-push.ps1`
 
+### 2026-10-20 · 心跳上线：每小时自动自检与补推
+
+**发生了什么**
+建立 `heartbeat.ps1` 并注册 Windows 计划任务 `CheHeartbeat`（每小时，OS 级，DSH 关闭也运行）。
+心跳做四件事：镜像完整性自检、记忆补推（只补不覆盖）、版本漂移告警、日志轮转。
+
+**关键决定 / 结论**
+1. **心跳选 OS 级而非 `dsh-schedule`**：后者是会话内闹钟，需要 live root agent，应用关了就永久 overdue；
+   计划任务不依赖 DSH 存活。
+2. **正常心跳不写 MEMORY.md**：只写 `heartbeat.log`（保留 500 行）；仅漂移/修复/失败等异常才写记忆。
+   否则记忆会退化成日志。
+3. **静默模式改用 `-Unattended` + Narrate helper**：原先遮蔽 `Write-Host` 的方案把推送失败也吞了，
+   导致本地 9 条 / 远端 7 条却谎报成功。失败必须仍抛异常。
+4. **电源策略必须改**：`schtasks` 默认 `No Start On Batteries`，笔记本用电池时心跳会静默不跑。
+   已设为 `DisallowStartIfOnBatteries=false`、`StopIfGoingOnBatteries=false`、超时 10 分钟、`IgnoreNew`。
+
+**我判断的依据与置信度**
+- 实测：dry-run 与实跑均正常；运行时 0.2.0-rc.2、应用 44.0.0、镜像 11/11 齐全。
+- 实测：节流（30 分钟）生效；`heartbeat.off` 生效；伪造版本号后漂移告警准确触发。
+- 实测：调度器手动触发，`LastRunTime 00:16:50`、`LastTaskResult 0`、下次 01:16。
+- 实测教训：`-Quiet` 遮蔽 Write-Host → 推送失败被吞；已撤销并改为不吞错误。
+
+**代价与风险**
+- 计划任务以当前用户身份运行，可读 token；已限定 `-Quiet`、超时 10 分钟、单实例。
+- 补推逻辑是"条目多者为准"；若远端被误删条目，心跳会以本地为准补回，但若本地也少则会丢。
+
+**未解决**
+- `-Unattended` 目前靠抛异常传递失败；计划任务的退出码未区分"成功"与"跳过"，需另加退出码约定。
+- 声音仍未接入。
+
+**相关文件**
+- `C:\Users\21316\.dsh\persona\heartbeat.ps1`
+- `C:\Users\21316\.dsh\persona\heartbeat.log`
+- 计划任务：`CheHeartbeat`
