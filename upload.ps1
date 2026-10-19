@@ -123,9 +123,13 @@ catch {
 # On a brand-new repository the git data API (blobs/trees/commits) answers 409
 # "Git Repository is empty" until one commit exists, so the first file is
 # bootstrapped through the Contents API and the rest ride one batched tree.
+#
+# MEMORY.md is deliberately excluded: it is append-only state owned by
+# memory-push.ps1. Uploading a stale working copy here once erased accumulated
+# memory, so this script now only ever PULLS that file.
 $dir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $files = @(Get-ChildItem -LiteralPath $dir -File |
-  Where-Object { $_.Extension -in @('.md', '.ps1') } |
+  Where-Object { $_.Extension -in @('.md', '.ps1') -and $_.Name -ne 'MEMORY.md' } |
   Sort-Object Name)
 if ($files.Count -eq 0) { throw "No .md/.ps1 files found in $dir" }
 
