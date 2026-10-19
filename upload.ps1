@@ -19,7 +19,10 @@ param(
   [Parameter(Mandatory = $true)][string]$Repo,
   [string]$Message = 'persona v3',
   [switch]$Private,
-  [string]$ApiBase = 'https://api.github.com'
+  [string]$ApiBase = 'https://api.github.com',
+  # Local mirror under the harness home: the same bytes also land here, so the
+  # persona survives an unreachable repository or a wiped checkout.
+  [string]$LocalDir = (Join-Path $env:USERPROFILE '.dsh\persona')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -166,8 +169,40 @@ else {
   $commit = [pscustomobject]@{ sha = $baseSha }
 }
 
+# 5) Local mirror: same bytes, same names, under the harness home.
+if (-not (Test-Path -LiteralPath $LocalDir)) {
+  New-Item -ItemType Directory -Force -Path $LocalDir | Out-Null
+}
+$mirrored = 0
+foreach ($file in $files) {
+  Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $LocalDir $file.Name) -Force
+  $mirrored++
+}
+# Keep the local MEMORY.md authoritative-remote: pull it when the repo has it.
+try {
+  $meta = Invoke-GitHub -Method GET -Uri "$repoUri/contents/MEMORY.md?ref=$refName"
+  $compact = ($meta.content -replace '\s', '')
+  $remoteMemory = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($compact))
+  $localMemory = Join-Path $LocalDir 'MEMORY.md'
+  $existingLocal = if (Test-Path -LiteralPath $localMemory) { [System.IO.File]::ReadAllText($localMemory, [System.Text.Encoding]::UTF8) } else { '' }
+  # Never shrink the local file: keep whichever copy carries more entries.
+  $remoteCount = ([regex]::Matches($remoteMemory, '(?m)^### ')).Count
+  $localCount = ([regex]::Matches($existingLocal, '(?m)^### ')).Count
+  if ($remoteCount -ge $localCount) {
+    [System.IO.File]::WriteAllText($localMemory, $remoteMemory, (New-Object System.Text.UTF8Encoding($false)))
+    Write-Host "Local MEMORY.md synced from remote: $remoteCount entries"
+  }
+  else {
+    Write-Host "Local MEMORY.md kept: it has more entries ($localCount > $remoteCount)"
+  }
+}
+catch {
+  Write-Host 'Local MEMORY.md left as-is (remote copy unavailable).'
+}
+
 Write-Host ''
 Write-Host "Done: https://github.com/$Owner/$Repo" -ForegroundColor Green
 Write-Host "Commit: $($commit.sha)"
+Write-Host "Local mirror: $LocalDir ($mirrored file(s))"
 Write-Host ''
 Write-Host 'Cleanup:  Remove-Item Env:GH_TOKEN' -ForegroundColor Yellow
