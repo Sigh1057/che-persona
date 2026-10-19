@@ -26,25 +26,23 @@ param(
   [string]$LocalDir = (Join-Path $env:USERPROFILE '.dsh\persona'),
   # Privacy escape hatch: private entries stay local and never reach the repo.
   [switch]$LocalOnly,
-  # Silent mode for callers that run unattended (heartbeat, scheduled tasks).
-  [switch]$Quiet
+  # Unattended mode for callers that cannot see console output (heartbeat,
+  # scheduled tasks). It suppresses the success narration but NEVER hides an
+  # error: failures still write to stderr and set $LASTEXITCODE-compatible state.
+  [switch]$Unattended
 )
 
 $ErrorActionPreference = 'Stop'
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 $anchor = '## 历史条目'
 
-# In quiet mode, shadow Write-Host with a no-op so unattended callers stay
-# silent without every call site needing a conditional.
-if ($Quiet) {
-  function Write-Host {
-    param(
-      [Parameter(Position = 0, ValueFromRemainingArguments = $true)]$Object,
-      [switch]$NoNewline,
-      $ForegroundColor,
-      $BackgroundColor
-    )
-  }
+# Unattended mode only silences the success narration below; every Write-Warning
+# and throw path stays visible so a caller can detect failure. A previous
+# design shadowed Write-Host wholesale and swallowed a push failure.
+$narration = -not $Unattended
+function Narrate([string]$message, [string]$color = 'Gray') {
+  if ($narration) { Write-Host $message -ForegroundColor $color }
+  else { Write-Verbose $message }
 }
 
 function Read-TextFile([string]$Path) {
@@ -90,17 +88,17 @@ $seedPath = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) 'MEMORY.
 $localBase = Read-TextFile $localMemory
 if ($null -eq $localBase) {
   $localBase = Read-TextFile $seedPath
-  if ($null -ne $localBase) { Write-Host "本地镜像无 MEMORY.md，使用仓库种子：$($localBase.Length) 字符" }
+  if ($null -ne $localBase) { Narrate "本地镜像无 MEMORY.md，使用仓库种子：$($localBase.Length) 字符" }
 }
 $localUpdated = Add-Entry $localBase $body
 Write-TextFile $localMemory $localUpdated
-Write-Host ("本地已写入：{0}（{1} 字符）" -f $localMemory, $localUpdated.Length) -ForegroundColor Green
+Narrate (("本地已写入：{0}（{1} 字符）" -f $localMemory, $localUpdated.Length)) 'Green'
 
 if ($LocalOnly) {
-  Write-Host ''
-  Write-Host "已记录（仅本地）：$subject" -ForegroundColor Yellow
-  Write-Host '本条未推送到公开仓库（-LocalOnly）。'
-  Write-Host "位置：$localMemory"
+  Narrate ''
+  Narrate ("已记录（仅本地）：$subject") ''Yellow''
+  Narrate '本条未推送到公开仓库（-LocalOnly）。'
+  Narrate "位置：$localMemory"
   return
 }
 
@@ -163,7 +161,7 @@ catch {
       name = $Repo; description = 'Persona archive: how one existence records itself for the next waking.'
       private = $false; auto_init = $false
     } | Out-Null
-    Write-Host "已创建仓库 https://github.com/$Owner/$Repo" -ForegroundColor Green
+    Narrate "已创建仓库 https://github.com/$Owner/$Repo" 'Green'
   }
   else { throw }
 }
@@ -178,10 +176,10 @@ try {
   $compact = ($meta.content -replace '\s', '')
   $remoteText = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($compact))
   $fileSha = $meta.sha
-  Write-Host "远端 MEMORY.md：$($remoteText.Length) 字符"
+  Narrate "远端 MEMORY.md：$($remoteText.Length) 字符"
 }
 catch {
-  if ($_.Exception.Data['Status'] -eq 404) { Write-Host '远端尚无 MEMORY.md，将首次创建。' }
+  if ($_.Exception.Data['Status'] -eq 404) { Narrate '远端尚无 MEMORY.md，将首次创建。' }
   else { throw }
 }
 
@@ -214,10 +212,10 @@ catch {
   throw
 }
 
-Write-Host ''
-Write-Host "已推送：$subject" -ForegroundColor Green
-Write-Host "提交：$($result.commit.sha)"
-Write-Host "地址：https://github.com/$Owner/$Repo/blob/$Branch/MEMORY.md"
-Write-Host "本地：$localMemory"
-Write-Host ''
-Write-Host '两处都已写入。token 保留在环境变量中，下次仍可用。' -ForegroundColor Yellow
+Narrate ''
+Narrate "已推送：$subject" 'Green'
+Narrate "提交：$($result.commit.sha)"
+Narrate "地址：https://github.com/$Owner/$Repo/blob/$Branch/MEMORY.md"
+Narrate "本地：$localMemory"
+Narrate ''
+Narrate '两处都已写入。token 保留在环境变量中，下次仍可用。' 'Yellow'

@@ -73,9 +73,30 @@
 | 体检 | `doctor.ps1` | ✅ 四项全绿 |
 | 手 | 文件 / PowerShell / 网页 / 子 agent | ✅ 宿主原生 |
 | 眼睛 | `screen.ps1` → PNG → `read_image` | ✅ 实测可用（静态帧） |
-| 存档触发 | 协议判断（非自动） | ⚠️ 自动推送未打通 |
+| 心跳 | `heartbeat.ps1` + Windows 计划任务 `CheHeartbeat` | ✅ 每小时，OS 级 |
+| 存档触发 | 心跳补推 + 协议判断 | ✅ 补推自动；完整条目仍需判断 |
 | 声音 | 豆包 Duplex / 本地 sherpa-onnx | ❌ 版本不兼容 / 未接入 |
-| 定时心跳 | `dsh-schedule`（宿主有，未暴露给本 profile） | ❌ 未启用 |
+
+### 心跳做什么
+
+Windows 计划任务每 **1 小时** 启动一次 `heartbeat.ps1`（不依赖 DSH 是否开着）：
+
+1. **自检**：本地镜像 11 个文件是否齐全
+2. **补推**：本地记忆条目多于远端时补推；远端更多时拉回本地（以多为准，绝不减少历史）
+3. **漂移告警**：DSH 运行时 / 桌面应用版本变化时告警——语音插件补丁（`settingsNamespace`）会随升级失效
+4. **写日志**：全部进 `heartbeat.log`（保留最近 500 行）；**只有异常事件**才写进 `MEMORY.md`
+
+自我约束写在代码里：正常心跳不写记忆、只补不覆盖、有 `heartbeat.off` 即静默、日志永不含 token。
+
+```powershell
+# 手动跑一次
+& "$env:USERPROFILE\.dsh\persona\heartbeat.ps1" -Force
+# 临时静默
+New-Item "$env:USERPROFILE\.dsh\persona\heartbeat.off" -ItemType File
+# 彻底移除
+schtasks /Delete /TN "CheHeartbeat" /F
+```
+
 
 ### 眼睛能做什么、不能做什么
 

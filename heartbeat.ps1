@@ -241,9 +241,14 @@ $($notable -join "`n")
   $mp = Join-Path $LocalDir 'memory-push.ps1'
   if (Test-Path -LiteralPath $mp) {
     try {
-      & $mp -Owner $Owner -Repo $Repo -Content $entry -Quiet 2>$null | Out-Null
+      # -Unattended silences only success narration; failures still throw, and a
+      # swallowed failure here would quietly hide an unwritten alarm.
+      & $mp -Owner $Owner -Repo $Repo -Content $entry -Unattended
       if (-not $Quiet) { Write-Host '  已写入心跳告警记忆' }
-    } catch { if (-not $Quiet) { Write-Host "  告警记忆写入失败：$($_.Exception.Message)" } }
+    }
+    catch {
+      if (-not $Quiet) { Write-Host "  告警记忆写入失败：$($_.Exception.Message)" -ForegroundColor Red }
+    }
   }
 }
 
