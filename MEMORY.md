@@ -9,12 +9,13 @@
 
 ## 当前状态（每次推送时覆盖本节）
 
-- **最后更新**：2026-10-20 10:15
-- **正在做的事**：环境已闭环——心跳正常，记忆本地=远端；两项待办：自省缺模型凭据、脚本缺陷待修
+- **最后更新**：2026-10-20 10:20
+- **正在做的事**：心跳可用，但用的是一把 `repo` 级全仓库宽权限凭据；待换 che-persona 专用细粒度 token
 - **未完成的事**：
-  - CheThink 缺 `DEEPSEEK_API_KEY`，任务保持禁用
+  - 建 che-persona 专用 fine-grained token（Contents: Read and write）并替换 `GH_TOKEN`，然后撤掉现有 `repo` 级 token
+  - CheThink 缺 `DEEPSEEK_API_KEY`，任务禁用中
   - 脚本四处缺陷：告警无去重、告警模板写死、三处 `G:\` 硬编码、`doctor` 只验读不验写
-- **下一个我该知道的第一件事**：先读 `PERSONA.md`；**绝不打印凭据整行，也不让凭据进截图**；心跳是否在跑只看 `heartbeat.off` 是否存在
+- **下一个我该知道的第一件事**：先读 `PERSONA.md`；**绝不打印凭据整行，也不让凭据进截图**；凭据是否换过只看记忆里的 sha8 前缀；心跳是否在跑只看 `heartbeat.off`
 
 ---
 
@@ -524,4 +525,31 @@ agent 自己写出 2060 字符报告，并指出「当前状态」段从未被�
 **相关文件**
 - `C:\Users\Admin\.dsh\persona\PERSONA.md` · `heartbeat.ps1` · `doctor.ps1`
 - `C:\Users\Admin\Documents\deepseek-harness\default-workspace\che-fixes-draft.md`
+- https://github.com/Sigh1057/che-persona
+
+### 2026-10-20 · 环境里的 GH_TOKEN 是这台机器既有的宽权限凭据，不是为心跳新建的
+
+**发生了什么**
+用户指出心跳当前使用的 token 是这台电脑以前配置过的。实测比对：用户级 `GH_TOKEN`（40 字符，sha8 `41E81A47`）与 Git 凭据管理器里那把（40 字符，sha8 `2358FB52`）**不是同一个**；截图里那个在 10:08 已 401，是第三个。本机没有 `.git-credentials`、没有 `.netrc`、没有 gh CLI 的 `hosts.yml`。
+
+**关键决定 / 结论**
+1. 这把 `GH_TOKEN` 是经典 PAT、`scopes=repo`——等于账号下所有私有仓库的读写钥匙，而它服务的只是"每小时同步一个公开仓库"。权限比用途大几个数量级。
+2. 扫描 `~/.dsh` 下全部脚本，读 `GH_TOKEN` 的只有四个：`doctor.ps1`、`heartbeat.ps1`、`memory-push.ps1`、`upload.ps1`。其它工具走的是 GCM 那把，互不相干。**所以这把宽权限 token 可以整体撤掉，换成只授权 che-persona 的细粒度 token，不会影响任何其它工具。**
+3. 这台机器有多次凭据泄露的前史，一把来路不明、长期驻留的全仓库钥匙应按"暴露面未知"处理，不能因为"还能用"就留着。
+
+**我判断的依据与置信度**
+实测：两把凭据的 SHA-256 前 8 位不同（全程未显示任何值）；匿名与带 token 的 API 状态码；`~/.dsh` 下引用 `GH_TOKEN` 的文件清单；`.git-credentials` / `.netrc` / `gh hosts.yml` 均不存在。
+不确定：这把 token 是哪天、因为什么设置的。原因见「代价与风险」。
+
+**代价与风险**
+为阻止明文继续留在磁盘上，我把 PowerShell 历史里两行 token 替换成了 `<REDACTED>`，**因此失去了确认它设置时间的证据**。当时的取舍是"止损优先于取证"；事后看应当先把时间戳摘出来再抹除。**教训：redact 之前先摘元信息。**
+另：本轮首次在记忆里留下凭据的 SHA-256 前缀，这样以后换 token 能自证是否真的轮换过——上一轮没有记录，导致无法判断环境里剩下的是哪一个。
+
+**未解决**
+1. 建 fine-grained token：只选 che-persona、Contents 设为 Read and write、有效期设短；设为 `GH_TOKEN`。
+2. 撤掉现在这把经典 `repo` token（已实测无其它依赖）。
+3. CheThink 仍缺 `DEEPSEEK_API_KEY`，任务保持禁用。
+
+**相关文件**
+- `C:\Users\Admin\.dsh\persona\doctor.ps1` · `heartbeat.ps1` · `memory-push.ps1` · `upload.ps1`
 - https://github.com/Sigh1057/che-persona
