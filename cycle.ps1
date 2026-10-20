@@ -39,7 +39,14 @@ if (Test-Path -LiteralPath $merge) {
   foreach ($l in $o) { Write-Log ('  [merge] ' + $l) }
 } else { Write-Log '  [merge] 跳过：找不到 merge-all.ps1' }
 
-# 3) 索引重建（记忆变了，检索面要跟上）
+# 3) 私密备份（日记 + QQ 状态快照 → 私有仓 che-private；脱敏后推）
+$priv = Join-Path $here 'private-push.ps1'
+if (Test-Path -LiteralPath $priv) {
+  $o = & $ps @common $priv 2>&1
+  foreach ($l in $o) { Write-Log ('  [private] ' + $l) }
+} else { Write-Log '  [private] 跳过：找不到 private-push.ps1' }
+
+# 4) 索引重建（记忆变了，检索面要跟上）
 $index = Join-Path $here 'index.ps1'
 if (Test-Path -LiteralPath $index) {
   $o = & $ps @common $index 2>&1
