@@ -9,13 +9,14 @@
 
 ## 当前状态（每次推送时覆盖本节）
 
-- **最后更新**：2026-10-20 10:20
-- **正在做的事**：心跳可用，但用的是一把 `repo` 级全仓库宽权限凭据；待换 che-persona 专用细粒度 token
+- **最后更新**：2026-10-20 10:44
+- **正在做的事**：环境闭环，等一起做开发。git 读写已验证可用（凭据走 GCM）
 - **未完成的事**：
-  - 建 che-persona 专用 fine-grained token（Contents: Read and write）并替换 `GH_TOKEN`，然后撤掉现有 `repo` 级 token
-  - CheThink 缺 `DEEPSEEK_API_KEY`，任务禁用中
+  - `GH_TOKEN` 为 `repo` 级，是用户明确决定，**不要再劝收窄**
+  - 命令行 git 需带 `-c http.sslBackend=schannel`（代理 CA 不在 openssl bundle；全局未改）
+  - CheThink 缺 `DEEPSEEK_API_KEY`，禁用中
   - 脚本四处缺陷：告警无去重、告警模板写死、三处 `G:\` 硬编码、`doctor` 只验读不验写
-- **下一个我该知道的第一件事**：先读 `PERSONA.md`；**绝不打印凭据整行，也不让凭据进截图**；凭据是否换过只看记忆里的 sha8 前缀；心跳是否在跑只看 `heartbeat.off`
+- **下一个我该知道的第一件事**：先读 `PERSONA.md`；**绝不打印凭据整行、不让凭据进截图**；凭据是否换过比对 sha8；心跳是否在跑只看 `heartbeat.off`
 
 ---
 
@@ -552,4 +553,31 @@ agent 自己写出 2060 字符报告，并指出「当前状态」段从未被�
 
 **相关文件**
 - `C:\Users\Admin\.dsh\persona\doctor.ps1` · `heartbeat.ps1` · `memory-push.ps1` · `upload.ps1`
+- https://github.com/Sigh1057/che-persona
+
+### 2026-10-20 · 决定：保留 repo 级 GH_TOKEN，不再劝收窄
+
+**发生了什么**
+我摆出实测（不带 `GH_TOKEN` 也能对私有仓库 clone 与 push --dry-run）之后，用户决定维持现状：后面需要 API 层直接操作所有仓库，所以保留 `repo` 级经典 token。
+
+**关键决定 / 结论**
+1. 这个决定由用户作出，理由成立。GCM 那把 `gho_` 虽然 scopes 也含 `repo`，但把它当通用 API 凭据用会模糊"git 专用"与"脚本专用"的边界；既然预期很快要做跨仓库 API 操作，保留一把专用的是合理取舍。
+2. **不再重复劝收窄。** 相关风险（全私有仓库钥匙、明文环境变量、MITM 代理叠加）已记在前一条目里，足以让下一个我知道代价，不需要每次见面再讲一遍。
+3. 权限变宽，用法不能变宽：persona 的四个脚本仍然只碰 che-persona，这条不随 token 权限改变。
+
+**我判断的依据与置信度**
+实测：移除 `GH_TOKEN` 后私有仓库 `clone` EXIT=0、`push --dry-run` EXIT=0，凭据来自 GCM；GCM 凭据对两个私有仓库 PUT 探针 422。
+用户决定：明确表态（"那天不会太远，就这样吧"），属于立场而非技术判断。
+
+**代价与风险**
+环境变量里留着一把覆盖全部私有仓库的钥匙，且这台机器的 HTTPS 经过 TLS 中间人代理。若它再次出现在截图或日志里，按泄露处理、立即轮换——**这一次记得先记下 sha8 指纹再动手**（当前值 sha8 `41E81A47`，用于将来比对是否真的换过）。
+
+**未解决**
+1. git 证书：代理 CA（`SteamTools Certificate`）不在 openssl 的 ca-bundle 里，命令行 git 需带 `-c http.sslBackend=schannel`。全局配置未改（用户未点头）；要改只需 `git config --global http.sslBackend schannel`。
+2. CheThink 仍缺 `DEEPSEEK_API_KEY`，任务保持禁用。
+3. 脚本四处缺陷待修，草案见 `default-workspace\che-fixes-draft.md`。
+
+**相关文件**
+- `C:\Users\Admin\.dsh\persona\heartbeat.ps1` · `doctor.ps1` · `memory-push.ps1` · `upload.ps1`
+- `C:\Users\Admin\Documents\deepseek-harness\default-workspace\che-fixes-draft.md`
 - https://github.com/Sigh1057/che-persona
