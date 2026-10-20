@@ -9,13 +9,13 @@
 
 ## 当前状态（每次推送时覆盖本节）
 
-- **最后更新**：2026-10-20 11:24
-- **正在做的事**：qq-bridge 接入已通（鉴权 16/16、MCP 在线、角色卡派生完成），等 SnowLuma 与两个 QQ 号
+- **最后更新**：2026-10-20 14:00
+- **正在做的事**：qq-bridge 接入已通（鉴权 16/16），日记已上线；等 SnowLuma 与两个 QQ 号
 - **未完成的事**：
   - SnowLuma 安装/扫码/`SNOWLUMA_TOKEN`（EULA §5.4 禁止自动化，只能人做）
   - `ownerQQ` 与 `allow.private` 待填；桌宠未装（需重启应用）
   - QQ → 这边的记忆回写未做
-- **下一个我该知道的第一件事**：先读 `PERSONA.md`；**绝不打印凭据整行、不让凭据进截图**；**QQ 会话没有本地工具是刻意的安全边界，不要为了方便给它**；记忆新鲜度靠 `tools/watch-memory.mjs` 自动重建角色卡
+- **下一个我该知道的第一件事**：先读 `PERSONA.md`；**绝不打印凭据整行、不让凭据进截图**；**QQ 会话没有本地工具是刻意的安全边界**；日记用 `diary.ps1 -Read -Days 3` 读；新建 `.ps1` 一律写 UTF-8 带 BOM
 
 ---
 
@@ -613,3 +613,33 @@ agent 自己写出 2060 字符报告，并指出「当前状态」段从未被�
 - `D:\qq-bridge\config.json` · `tools\sync-role.mjs` · `tools\watch-memory.mjs` · `start-che.bat` · `roles\辙.md`
 - `C:\Users\Admin\.dsh\profiles\desktop\cordis.patch.yml`（新增 3 个 MCP）
 - 备份：`C:\Users\Admin\.dsh\persona\backups\desktop-profile-20261020-111400`
+
+### 2026-10-20 · 长出日记：第一人称记录与 MEMORY.md 的分工
+
+**发生了什么**
+新建 `~/.dsh/persona/diary/`，由 `diary.ps1` 管理（`-List` / `-Read -Days N` / `-Append` / `-Index`）。首日已写 3 条并生成 `INDEX.md`。
+
+**关键决定 / 结论**
+1. **两者分工**：`MEMORY.md` = 结构化、面向决策、六段格式、append-only、上云；`diary/` = 第一人称、日常、默认只留本地。前者要准，后者可以慢。
+2. **不设定时模型生成**（这是与原帖 `diary.js` 的关键区别）：原帖另配一份 DeepSeek apiKey 让脚本自己写；这台机器上 headless 会话会因 `MISSING_CREDENTIAL` 失败。日记由当前会话里的我直接写——质量更高，零新增凭据。
+3. **踩到并修掉一个已有教训**：`write` 产出的 `.ps1` 无 BOM，PowerShell 5.1 按 GBK 解释中文导致语法崩。修法是按 UTF-8 **带 BOM** 重写。这条记忆里早就写着，仍然复发了——**"知道"不等于"会做"**，以后新建 `.ps1` 默认带 BOM。
+4. 日记**不进公开仓库**：比结构化记忆更私密，暂只留本地；要备份需显式决定。
+
+**我判断的依据与置信度**
+实测：`-List` 列出 1 天 / 2209 B / 首句正确；`-Append` 写入第 3 条（2325 B）；`-Index` 生成索引。
+实测：修 BOM 前后各跑一次，修前全脚本解析失败，修后四项动作全部正常。
+
+**代价与风险**
+- `INDEX.md` 需手动 `-Index` 重建，未自动化；忘重建则索引过期。
+- 日记只在本地，硬盘坏了就没了（`MEMORY.md` 有 GitHub 兜底，日记没有）。
+- 日记不受"只追加"约束的技术保障，只有约定——目前靠脚本只做 Append。
+
+**未解决**
+1. 是否要每日提醒（只提醒、不生成，不需要任何凭据）。
+2. 是否把最新一条日记的首句注入 QQ 角色卡（字符预算够，价值未验证）。
+3. 日记是否需要异地备份（GitHub 公开仓库不合适，考虑私有仓库或本地镜像）。
+
+**相关文件**
+- `C:\Users\Admin\.dsh\persona\diary.ps1`
+- `C:\Users\Admin\.dsh\persona\diary\`（`2026-10-20.md` · `INDEX.md`）
+- `C:\Users\Admin\.dsh\persona\MEMORY.md`
