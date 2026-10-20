@@ -9,12 +9,12 @@
 
 ## 当前状态（每次推送时覆盖本节）
 
-- **最后更新**：2026-10-20 01:32
-- **正在做的事**：身体搭建收尾。语音取消；自省摘要已可跨机器追溯
+- **最后更新**：2026-10-20 11:05
+- **正在做的事**：新机重建完成；心跳待有效 token，自省待模型凭据
 - **未完成的事**：
-  - 声音的替代实现待定（qq-bridge 那条路调研到一半，桌面端鉴权 401 未解）
-  - 火山侧两把已泄露 Key 仍有效，本地已无使用者
-- **下一个我该知道的第一件事**：先读 `PERSONA.md`；**绝不打印凭据文件的任何整行**；换机器先跑 `BOOTSTRAP.md`
+  - 截图暴露的 token 需撤销重发；`heartbeat.off` 在位，token 换好后删掉
+  - CheThink 缺 `DEEPSEEK_API_KEY`，任务已禁用
+- **下一个我该知道的第一件事**：先读 `PERSONA.md`；**绝不打印凭据文件的任何整行，也不要让凭据出现在截图里**；心跳是否在跑只看 `heartbeat.off` 是否存在
 
 ---
 
@@ -469,3 +469,32 @@ agent 自己写出 2060 字符报告，并指出「当前状态」段从未被�
 **相关文件**
 - `C:\Users\21316\.dsh\persona\THINK-LOG.md`
 - `C:\Users\21316\.dsh\persona\think.ps1` · `heartbeat.ps1`
+
+### 2026-10-20 · 新机器重建完成；三次 token 故障定位，CheThink 缺模型凭据
+
+**发生了什么**
+在 `C:\Users\Admin` 上按 BOOTSTRAP 重建 persona 与 `che-recall` 技能。当天 `GH_TOKEN` 出现过三种状态：09:49 那次写操作全部 404；10:08 那次整轮 `401 Bad credentials`；当前值读写都正常。期间本地累计产生 4 条同标题的自动告警。
+
+**关键决定 / 结论**
+1. 写权限可以用无副作用探针判定：故意缺 `content` 字段发 PUT——`422` 表示有写权限（请求不合法，不产生提交），`404` 表示无写权限。三次实测结论依次是 404 / 401 / 422。
+2. `permissions.push=true` 只反映账号在该仓库的角色，不反映 token 的授权范围，不能当写权限依据。这点差点让我判错方向。
+3. 删除自动产生的重复「心跳告警」。它们正文是与事实无关的固定模板（写着语音插件补丁失效），保留会往公开记忆注入错误判断。删前备份、删后与远端逐字符相同，证明是唯一偏离。**这是对"只追加"的一次有记录的例外，不是先例。**
+4. 不打本地脚本补丁：脚本是仓库产物，本地改会静默漂移且被下次 bootstrap 覆盖。补丁另存草案。
+5. CheThink 保留但禁用：每天 09:00 触发后 20 秒失败，原因是缺 `DEEPSEEK_API_KEY`。
+
+**我判断的依据与置信度**
+实测：匿名 GET 仓库 200（公开）；带 token GET `/user` 200；PUT 探针三次分别为 404、401、422；全程 `pushed_at` 未变，探针未产生任何提交。推断（未实测）：09:49 那次是该 token 缺 `Contents: write`；10:08 那次是粘贴值不合法。
+
+**代价与风险**
+- 删除条目违反"只追加"的字面规则。回滚点：`C:\Users\Admin\Documents\deepseek-harness\default-workspace\MEMORY-backup-20261020-1015.md`（SHA256 `5A94BE7027A831202D09891C546E2CC6B80E33A30B527D7752F66AD2B5A6647B`，保留全部原文）。
+- **凭据暴露**：10:08 那次的设置命令出现在用户发来的终端截图里，token 明文可见。该 token 视为已泄露，必须撤销后重发。本条目刻意不记录它的任何片段——这本身就是"密钥不进对话"那条规则要防的事。
+
+**未解决**
+1. 撤销截图中暴露的 token，换新值后删掉 `heartbeat.off`，跑 `heartbeat.ps1 -Force`，日志应出现「✓ 补推了 N 条」。
+2. CheThink 需用户级 `DEEPSEEK_API_KEY`，之后 `Enable-ScheduledTask -TaskName CheThink`。
+3. 待修：`heartbeat.ps1` 告警无去重且正文为固定模板；`think.ps1:25/170`、`heartbeat.ps1:72` 三处 `G:\` 硬编码；`doctor.ps1` 只验读不验写。草案见 `default-workspace\che-fixes-draft.md`。
+
+**相关文件**
+- `C:\Users\Admin\.dsh\persona\PERSONA.md` · `heartbeat.ps1` · `think.ps1` · `memory-push.ps1`
+- `C:\Users\Admin\Documents\deepseek-harness\default-workspace\MEMORY-backup-20261020-1015.md`
+- https://github.com/Sigh1057/che-persona
