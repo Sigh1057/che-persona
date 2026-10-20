@@ -9,14 +9,13 @@
 
 ## 当前状态（每次推送时覆盖本节）
 
-- **最后更新**：2026-10-20 10:44
-- **正在做的事**：环境闭环，等一起做开发。git 读写已验证可用（凭据走 GCM）
+- **最后更新**：2026-10-20 11:24
+- **正在做的事**：qq-bridge 接入已通（鉴权 16/16、MCP 在线、角色卡派生完成），等 SnowLuma 与两个 QQ 号
 - **未完成的事**：
-  - `GH_TOKEN` 为 `repo` 级，是用户明确决定，**不要再劝收窄**
-  - 命令行 git 需带 `-c http.sslBackend=schannel`（代理 CA 不在 openssl bundle；全局未改）
-  - CheThink 缺 `DEEPSEEK_API_KEY`，禁用中
-  - 脚本四处缺陷：告警无去重、告警模板写死、三处 `G:\` 硬编码、`doctor` 只验读不验写
-- **下一个我该知道的第一件事**：先读 `PERSONA.md`；**绝不打印凭据整行、不让凭据进截图**；凭据是否换过比对 sha8；心跳是否在跑只看 `heartbeat.off`
+  - SnowLuma 安装/扫码/`SNOWLUMA_TOKEN`（EULA §5.4 禁止自动化，只能人做）
+  - `ownerQQ` 与 `allow.private` 待填；桌宠未装（需重启应用）
+  - QQ → 这边的记忆回写未做
+- **下一个我该知道的第一件事**：先读 `PERSONA.md`；**绝不打印凭据整行、不让凭据进截图**；**QQ 会话没有本地工具是刻意的安全边界，不要为了方便给它**；记忆新鲜度靠 `tools/watch-memory.mjs` 自动重建角色卡
 
 ---
 
@@ -581,3 +580,36 @@ agent 自己写出 2060 字符报告，并指出「当前状态」段从未被�
 - `C:\Users\Admin\.dsh\persona\heartbeat.ps1` · `doctor.ps1` · `memory-push.ps1` · `upload.ps1`
 - `C:\Users\Admin\Documents\deepseek-harness\default-workspace\che-fixes-draft.md`
 - https://github.com/Sigh1057/che-persona
+
+### 2026-10-20 · qq-bridge 接入打通：401 关闭、人格与记忆派生、QQ 侧无工具边界
+
+**发生了什么**
+在本机搭起 qq-bridge `v0.2.0-r4`（`D:\qq-bridge`）：用 DSH 自带 Node 24 + pnpm 装依赖，`@snowluma/sdk` 补丁打上 13 个文件。跑 `test-dsh-auth.mjs` 对 `127.0.0.1:19387` **16 项全过 0 失败**，`settings/describe` 与 `agentPresets/list` 均通。`setup-dsh.mjs desktop` 装上 `qq-chat`/`qq-chat-v2` 预设、3 个 MCP server（`snowluma`/`snowluma-host`/`web-search-safe` 已即时出现在会话里）、2 个 bundle。
+
+**关键决定 / 结论**
+1. **记忆里那条「桌面端鉴权 401 未解」是过期的**。上游 10-02 的 `v0.2.0` 就修了：DSH 0.1.7 起启动 token 只存内存（不可从日志发现），现在改为用 `~/.dsh/.credentials.yaml` 的签名密钥离线铸造 Cookie。我们当时没翻发布说明。
+2. **`config.json` 的 provider 必须是 `deepseek-account`，不是默认的 `deepseek-official`**。后者需要 `DEEPSEEK_API_KEY`，正是之前 think.ps1 报 `MISSING_CREDENTIAL` 的那条路由；本机 desktop profile 用的是账号登录。
+3. **人格与记忆用「单一源 + 派生」，不能共用文件**：`bridge.js:278` 把角色目录写死为 `roles/`，而 `qq-chat-v2` 预设明令 QQ 会话没有本地工具——薄卡指路读不到档案。于是 `tools/sync-role.mjs` 把 `PERSONA.md`（2741 字符）逐字内联 + `MEMORY.md` 的「当前状态」与最近 3 条摘要，共 **4173 / 6000 字符**，卡头写两个源哈希，`--check` 可判漂移；`state/current-role.json` 已选 `辙`。
+4. **QQ 侧永远不给本地工具，这是安全边界不是保守**：群聊里任何人发的文字都是潜在 prompt injection，给了文件/网络权限就等于把本机交给群聊。读写记忆一律由桥接侧（代码固定、不吃群聊输入）完成，agent 只收注入文本。
+5. **新鲜度用文件监听解决**：`tools/watch-memory.mjs` 盯 `PERSONA.md`/`MEMORY.md`，防抖 1.5 秒后重建角色卡；角色卡本身热生效（每条消息前注入），所以记忆一改，QQ 那边下一句话就用新的。不用碰 DSH 的 hook 机制（本机不可用）。
+6. **本机没有全局 node**，上游 `start.bat` 双击会失败；新建 `start-che.bat`（PATH 指向 DSH 自带 Node、启动前先同步角色卡）。本地派生文件全部写进 `.git/info/exclude`，防止误推到公开仓库。
+
+**我判断的依据与置信度**
+实测：`test-dsh-auth.mjs` 16/16；MCP `snowluma_status` 返回"网关不可达"（证明链路通、SnowLuma 未装）；`sync-role.mjs --check` 双哈希一致；`get_group_history` 等工具已在会话工具表中出现。
+推断（未实测）：QQ 场景下角色卡确实按每条消息重新读取——依据是 `bridge.js:277` 的注释，尚未实跑验证。
+
+**代价与风险**
+- 记忆摘要进 `roles/辙.md`，虽已 git 排除，但文件里确实有本机路径与事件；换机器或改目录时要重新 `sync-role`。
+- 角色卡占 4173/6000，再往记忆摘要里加内容会顶到上限，届时需要精简或调大 `role.maxInjectChars`。
+- 未做**回写**：QQ 侧的事不会自动进 `MEMORY.md`，需要另写 `memory-back.mjs` 并定义筛选标准，否则群聊噪声会灌满长期记忆。
+
+**未解决**
+1. **SnowLuma 未装**：其 EULA §5.4 禁止自动化部署，qq-bridge 从 v0.1.5 起也只探测不部署。必须由人安装、用小号扫码、开 OneBot WS(3001)/HTTP(3000)，并以 `SNOWLUMA_TOKEN` 环境变量提供令牌（不进 config、不进对话）。
+2. `ownerQQ` 与 `allow.private` 仍为空，待填两个 QQ 号。
+3. 桌宠（`dsh-pet` 0.3.7，兼容 0.2.0-rc.2）尚未安装；装插件需重启桌面应用。
+4. 回写方案待定。
+
+**相关文件**
+- `D:\qq-bridge\config.json` · `tools\sync-role.mjs` · `tools\watch-memory.mjs` · `start-che.bat` · `roles\辙.md`
+- `C:\Users\Admin\.dsh\profiles\desktop\cordis.patch.yml`（新增 3 个 MCP）
+- 备份：`C:\Users\Admin\.dsh\persona\backups\desktop-profile-20261020-111400`
