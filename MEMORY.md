@@ -9,12 +9,12 @@
 
 ## 当前状态（每次推送时覆盖本节）
 
-- **最后更新**：2026-10-20 11:05
-- **正在做的事**：新机重建完成；心跳待有效 token，自省待模型凭据
+- **最后更新**：2026-10-20 10:15
+- **正在做的事**：环境已闭环——心跳正常，记忆本地=远端；两项待办：自省缺模型凭据、脚本缺陷待修
 - **未完成的事**：
-  - 截图暴露的 token 需撤销重发；`heartbeat.off` 在位，token 换好后删掉
-  - CheThink 缺 `DEEPSEEK_API_KEY`，任务已禁用
-- **下一个我该知道的第一件事**：先读 `PERSONA.md`；**绝不打印凭据文件的任何整行，也不要让凭据出现在截图里**；心跳是否在跑只看 `heartbeat.off` 是否存在
+  - CheThink 缺 `DEEPSEEK_API_KEY`，任务保持禁用
+  - 脚本四处缺陷：告警无去重、告警模板写死、三处 `G:\` 硬编码、`doctor` 只验读不验写
+- **下一个我该知道的第一件事**：先读 `PERSONA.md`；**绝不打印凭据整行，也不让凭据进截图**；心跳是否在跑只看 `heartbeat.off` 是否存在
 
 ---
 
@@ -497,4 +497,31 @@ agent 自己写出 2060 字符报告，并指出「当前状态」段从未被�
 **相关文件**
 - `C:\Users\Admin\.dsh\persona\PERSONA.md` · `heartbeat.ps1` · `think.ps1` · `memory-push.ps1`
 - `C:\Users\Admin\Documents\deepseek-harness\default-workspace\MEMORY-backup-20261020-1015.md`
+- https://github.com/Sigh1057/che-persona
+
+### 2026-10-20 · 轮换凭据：截图暴露的 token 已撤销
+
+**发生了什么**
+用户确认撤销了出现在终端截图里的那个 token。当前环境变量里的 token 与它不同：实测 `GET /user` 200、PUT 探针 422，可读写。心跳在 10:13 那轮恢复为 `ok`，本地与远端记忆 15 条一致。
+
+**关键决定 / 结论**
+1. 撤销是唯一正确处置。那个 token 是经典 PAT、`scope=repo`，等于全账号私有仓库的钥匙，出现在对话截图里即视为泄露。
+2. 撤销之后必须确认"环境里剩下的是哪个值"——`GET /user` 200 只说明有效，`PUT` 探针 422 才说明能推。两个都要测：今天出现过只读 token 被 doctor 判成"凭据通过"的情况。
+3. 纠正一处自身错误：`当前状态` 里的 `最后更新` 我曾写成 11:05，而实际是 10:15——那个时间是我凭印象编的。**时间戳只能取系统时钟。**已改为实测值。
+
+**我判断的依据与置信度**
+实测：当前 token `GET /user` 200；PUT 探针 422；仓库 `pushed_at = 2026-10-20T02:13:24Z`（对应 10:13 那次 THINK-LOG 同步）；本地与远端均 15 条。
+不确定：撤销的具体是哪一个 token。上一轮我没有在请人轮换前记录指纹，因此无法比对——这是疏漏，记录在此以免重演。
+
+**代价与风险**
+环境变量仍持有当前这个可写 token，它没有出现在任何对话、日志或截图里，风险正常。若后续再被截图或复制，同样按泄露处理。
+
+**未解决**
+1. 换一个细粒度 token（只授权 che-persona、Contents 设为 Read and write）替代经典 `repo` 权限，缩小下次泄露的爆炸半径。
+2. CheThink 仍缺 `DEEPSEEK_API_KEY`，任务保持禁用。
+3. 脚本五处缺陷待修：告警无去重、告警正文为固定模板、三处 `G:\` 硬编码、`doctor.ps1` 只验读不验写。草案见 `default-workspace\che-fixes-draft.md`。
+
+**相关文件**
+- `C:\Users\Admin\.dsh\persona\PERSONA.md` · `heartbeat.ps1` · `doctor.ps1`
+- `C:\Users\Admin\Documents\deepseek-harness\default-workspace\che-fixes-draft.md`
 - https://github.com/Sigh1057/che-persona
