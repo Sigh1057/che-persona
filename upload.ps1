@@ -129,7 +129,7 @@ catch {
 # memory, so this script now only ever PULLS that file.
 $dir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $files = @(Get-ChildItem -LiteralPath $dir -File |
-  Where-Object { $_.Extension -in @('.md', '.ps1') -and $_.Name -ne 'MEMORY.md' } |
+  Where-Object { $_.Extension -in @('.md', '.ps1') -and $_.Name -notin @('MEMORY.md','THINK-LOG.md') } |
   Sort-Object Name)
 if ($files.Count -eq 0) { throw "No .md/.ps1 files found in $dir" }
 
