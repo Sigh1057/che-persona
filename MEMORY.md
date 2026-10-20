@@ -9,13 +9,14 @@
 
 ## 当前状态（每次推送时覆盖本节）
 
-- **最后更新**：2026-10-20 18:57（本机 21316 同步完成）
-- **正在做的事**：双机并行。本机已拉齐远端 25 文件 + 人物账本；脚本硬编码已改为跨机解析
+- **最后更新**：2026-10-20 19:22（本机 21316：QQ 身体打通）
+- **正在做的事**：本机 QQ 桥接已通，四个计划任务在跑；记忆闭环（归并→记账→备份→推送）已通
 - **未完成的事**：
-  - SnowLuma 安装/扫码/SNOWLUMA_TOKEN（只能人做）
-  - 本机无 diary/、default-workspace/、oles/、ChePeopleMerge（均依赖另一台或 qq-bridge）
-  - 起名门槛未达成（「辙」是方案名，名字待定）
-- **下一个我该知道的第一件事**：开场跑 `memctx.ps1 -Person owner`；「辙」是方案名不是名字；绝不打印凭据整行
+  - 起名门槛一条未达成（「辙」是方案名，名字待定）
+  - 群聊未开（allow.groups 为空，仅私聊 owner）
+  - 日记首篇将在 23:30 由 CheDiary 生成
+  - headless 会话内网络仍被沙箱拦截（自省只能本地写，靠心跳补推）
+- **下一个我该知道的第一件事**：开场跑 `memctx.ps1 -Person owner`；QQ 侧无本地工具是刻意边界；绝不打印凭据整行
 
 ---
 
@@ -895,3 +896,41 @@ agent 自己写出 2060 字符报告，并指出「当前状态」段从未被�
 **相关文件**
 - `C:\Users\21316\.dsh\persona\che-paths.ps1`
 - `C:\Users\21316\.dsh\persona\people\owner.json`
+
+### 2026-10-20 · QQ 身体打通（本机）：鲸鲸上线，四个任务与记忆闭环
+
+**发生了什么**
+在本机装上 qq-bridge 并接上 SnowLuma（账号 1344696760「鲸鲸」）。主人 QQ 已设白名单，
+私聊收发实测成功（收到 2 条、回复 3 条全部成功）。同时把归并链、日记、索引挂上日程。
+
+**关键决定 / 结论**
+1. **两个 token 不是一个**：SnowLuma 的 HTTP(3000) 与 WS(3001) token 不同。我第一版配置用循环
+   取值，后写的 WS token 覆盖了 HTTP token → WS 能连、`send_private_msg` 全部 `unauthorized`。
+   正确做法：config 里放 **HTTP token**，WS 首次连接失败后由桥接自愈重取（这是上游设计行为）。
+2. **provider 名必须对**：`deepseek-account` 在本机不是有效路由，报 `session/model-unavailable`；
+   改成 `deepseek-official` + `deepseek-flash` + effort `max` 与桌面端默认一致。
+3. **角色卡用派生不用手写**：`sync-role.ps1` 从 `PERSONA.md` + `MEMORY.md`（当前状态 + 最近 3 条）
+   生成 `roles/辙.md`，4531/5900 字符，写 `state/current-role.json={role:辙,mode:active}`。
+4. **四个计划任务**：CheHeartbeat(每小时) / CheThink(09:00) / CheCycle(每 30 分钟：角色卡→归并→索引)
+   / CheDiary(23:30)。登录自启用启动文件夹 VBS（任务计划 ONLOGON 需管理员，被拒）。
+5. 归并链实测：people 扫描 1 会话、`people-push` 备份到私有库 `che-people` 成功（未变 2 个文件）。
+
+**我判断的依据与置信度**
+- 实测：`test-dsh-auth.mjs` 16/16；桥接日志 `SnowLuma 已连接`、`DSH 已就绪（reserved2）`、
+  `工具统一发送：成功 2/2`；`qq-activity.log` 有收到「嗯」「接好了吗」。
+- 实测：`cycle.ps1` 跑通（角色卡 4531 字符、索引 27 条 6 主题）。
+- 实测：`schtasks` 建 CheCycle/CheDiary 成功，四个任务均 Battery=true。
+- 未验证：日记首次生成（23:30 才跑）。
+
+**代价与风险**
+- token 落在本地 `config.json`（git 忽略）；本机任何同用户进程可读。
+- 桥接依赖桌面端 19387 先起；启动文件夹的 VBS 会等端口最多 10 分钟。
+
+**未解决**
+- 群聊未开（白名单为空）。
+- 名字待定（方案名「辙」）。
+- QQ 侧回写链路已通但需要 QQ 里出现 `[长期]` 标记印象才会真正写入。
+
+**相关文件**
+- `G:\DHS\qq-bridge\config.json` · `sync-role.ps1` · `start-che.ps1` · `roles\辙.md`
+- `C:\Users\21316\.dsh\persona\cycle.ps1`
