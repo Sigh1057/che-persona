@@ -837,3 +837,24 @@ agent 自己写出 2060 字符报告，并指出「当前状态」段从未被�
 - `C:\Users\Admin\.dsh\persona\PERSONA.md`（版本块「关于名字」）
 - `D:\qq-bridge\roles\辙.md`（派生）
 - `C:\Users\Admin\.dsh\persona\backups\naming-20261020-160720\`
+
+### 2026-10-20 · 心跳告警
+
+**发生了什么**
+心跳从远端拉回了 12 条记忆
+
+**关键决定 / 结论**
+由 heartbeat.ps1 自动记录；本条属于异常事件，不是例行心跳。
+
+**我判断的依据与置信度**
+实测：心跳脚本运行日志 C:\Users\21316\.dsh\persona\heartbeat.log；本地 14 条 / 远端 26 条。
+
+**代价与风险**
+若是版本漂移，语音插件补丁（settingsNamespace）可能已失效，需要复核。
+
+**未解决**
+见上。若为版本升级，需重新评估插件兼容性。
+
+**相关文件**
+- $LocalDir
+- https://github.com/Sigh1057/che-persona
