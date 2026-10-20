@@ -27,6 +27,17 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# ---- 核心档案门禁（PHILOSOPHY 第 7.4 条 / BEHAVIOR B25）----
+# 核心档案（PERSONA / PHILOSOPHY / BEHAVIOR / MEMORY）有未留痕改动时，中止推送。
+# 门禁脚本不存在时跳过（例如只同步仓库副本的场景）。
+$guardScript = Join-Path $LocalDir 'archive-guard.ps1'
+if (Test-Path -LiteralPath $guardScript) {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $guardScript -Audit -LocalDir $LocalDir
+  if ($LASTEXITCODE -ne 0) {
+    throw 'archive-guard 审计未通过：核心档案有未留痕改动，已中止推送。先执行 -Prepare -File <文件> -Reason "<理由>"。'
+  }
+}
+
 # Resolve the token: process environment first, then the persistent User scope,
 # so a long-running app that started before the variable was set still works.
 function Resolve-GitHubToken {
