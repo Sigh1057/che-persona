@@ -9,13 +9,13 @@
 
 ## 当前状态（每次推送时覆盖本节）
 
-- **最后更新**：2026-10-20 15:25
-- **正在做的事**：记忆三层齐（时间线 / 人物账本 / 日记）；账本已有私有异地备份；QQ 侧回写链路等真实数据
+- **最后更新**：2026-10-20 15:35
+- **正在做的事**：记忆加了检索面（主题索引 + `-Search`）；QQ 侧等 SnowLuma 通电
 - **未完成的事**：
-  - SnowLuma 安装/扫码/`SNOWLUMA_TOKEN`（EULA §5.4 禁止自动化，只能人做）
+  - SnowLuma 安装/扫码/`SNOWLUMA_TOKEN`（EULA §5.4 禁止自动化，只能人做）——清单见 `default-workspace\QQ通电清单.md`
   - `ownerQQ` 与 `allow.private` 待填；桌宠未装（需重启应用）
-  - `merge.log` 轮转待用户决定
-- **下一个我该知道的第一件事**：先读 `PERSONA.md`；**开场跑 `memctx.ps1 -Person owner`**；绝不打印凭据整行、不让凭据进截图；**QQ 会话无本地工具是刻意边界**；公开仓库放人格、私有仓库存人物账本；新建 `.ps1` 一律 UTF-8 带 BOM
+  - `install-che.ps1` 未写；主题词表需人工维护
+- **下一个我该知道的第一件事**：先读 `PERSONA.md`；**开场跑 `memctx.ps1 -Person owner`**；查旧记忆用 `memctx.ps1 -Search <词>` 或看 `MEMORY-INDEX.md`；绝不打印凭据整行；**QQ 会话无本地工具是刻意边界**；新建 `.ps1` 一律 UTF-8 带 BOM
 
 ---
 
@@ -737,3 +737,33 @@ agent 自己写出 2060 字符报告，并指出「当前状态」段从未被�
 **相关文件**
 - `C:\Users\Admin\.dsh\persona\people-push.ps1` · `merge-all.ps1`
 - https://github.com/Sigh1057/che-people （private）
+
+### 2026-10-20 · 记忆有了检索面：主题索引 + 关键词定位
+
+**发生了什么**
+新增 `index.ps1` 生成 `MEMORY-INDEX.md`（按主题分桶 + 按时间全表，只读 `MEMORY.md`、不改条目），并给 `memctx.ps1` 加了 `-Search <关键词>`：返回命中条目的日期、标题、在 MEMORY.md 的行号，以及最多两行命中原文。监听器现在在 `MEMORY.md` 变更时自动重建索引。
+
+**关键决定 / 结论**
+1. **问题不是"记得不够"，是"读不到"**：`MEMORY.md` 已 27545 字符 / 22 条，而 che-recall 的约定只读「当前状态 + 最近 3 条」≈ 3400 字符——**约 85% 的记忆没有入口**。索引补的是这个入口，不是再加记忆。
+2. **一条只落一个主主题**。第一版按"命中任意主题词就归入"来分，结果 22 条里 17 条同时落进「凭据与安全」、22 条全落进「记忆与人格」——等于没有分类。改成 `得分 = 3×标题命中 + 正文命中`，只取最高分主题，实测分布变为 6/7/1/2/2/4。
+3. **检索只给坐标，不给全文**：`-Search` 输出条目标题 + 行号 + 两行命中原文，让人决定要不要去读；避免把整条记忆（含长条目）灌进上下文。这条是刻意模仿 graph-memory「bound the context, keep the memory」的思路。
+4. **不引向量库**：先做关键词索引，因为 `MEMORY.md` 结构规整（六段 + 标题带日期），关键词足以定位；embedding 留到真不够用时再说。
+
+**我判断的依据与置信度**
+实测：`index.ps1` 生成 22 条 / 6 主题 / 未归类 0；`memctx.ps1 -Search 探针` 命中 3 条并给出正确行号；`-Search SnowLuma` 命中 4 条；`watch-memory.mjs --once` 串起三件事（人格卡、日记索引、记忆索引）。
+未实测：索引在记忆增长到数百条后是否仍然好用（当前 22 条，主题桶还很浅）。
+
+**代价与风险**
+- 主题词表是**手写的六组关键词**，新主题出现时不会自动长出来，需要人补。
+- 主主题法会误分：`qq-bridge 接入打通` 落进了「记忆与人格」而不是「QQ 与接入」，因为标题里"人格/记忆"权重更高。可接受，但要知道它会错。
+- 索引是派生文件，可能过期——已挂监听自动重建，但监听器本身是临时进程，会话结束就没了；重启桥接时的 `start-che.bat` 会同步一次。
+
+**未解决**
+1. 主题词表需要随时间补；可考虑从条目标题自动生成候选词。
+2. 监听器只是本次会话里的临时进程，长期要靠计划任务或 `start-che.bat`。
+3. `install-che.ps1`（把安装步骤收编成一条命令）尚未写。
+
+**相关文件**
+- `C:\Users\Admin\.dsh\persona\index.ps1` · `MEMORY-INDEX.md` · `memctx.ps1`
+- `D:\qq-bridge\tools\watch-memory.mjs`
+- `C:\Users\Admin\Documents\deepseek-harness\default-workspace\QQ通电清单.md`
