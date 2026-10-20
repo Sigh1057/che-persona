@@ -9,13 +9,13 @@
 
 ## 当前状态（每次推送时覆盖本节）
 
-- **最后更新**：2026-10-20 14:00
-- **正在做的事**：qq-bridge 接入已通（鉴权 16/16），日记已上线；等 SnowLuma 与两个 QQ 号
+- **最后更新**：2026-10-20 14:50
+- **正在做的事**：记忆已长成两维（时间线 + 人物账本）；qq-bridge 待通电
 - **未完成的事**：
   - SnowLuma 安装/扫码/`SNOWLUMA_TOKEN`（EULA §5.4 禁止自动化，只能人做）
   - `ownerQQ` 与 `allow.private` 待填；桌宠未装（需重启应用）
-  - QQ → 这边的记忆回写未做
-- **下一个我该知道的第一件事**：先读 `PERSONA.md`；**绝不打印凭据整行、不让凭据进截图**；**QQ 会话没有本地工具是刻意的安全边界**；日记用 `diary.ps1 -Read -Days 3` 读；新建 `.ps1` 一律写 UTF-8 带 BOM
+  - QQ 侧印象归并进 `people/` 未做（缺真实数据）
+- **下一个我该知道的第一件事**：先读 `PERSONA.md`；**会话开场跑 `memctx.ps1 -Person owner` 一次拿到全部上下文**；绝不打印凭据整行、不让凭据进截图；**QQ 会话没有本地工具是刻意的安全边界**；新建 `.ps1` 一律写 UTF-8 带 BOM
 
 ---
 
@@ -643,3 +643,34 @@ agent 自己写出 2060 字符报告，并指出「当前状态」段从未被�
 - `C:\Users\Admin\.dsh\persona\diary.ps1`
 - `C:\Users\Admin\.dsh\persona\diary\`（`2026-10-20.md` · `INDEX.md`）
 - `C:\Users\Admin\.dsh\persona\MEMORY.md`
+
+### 2026-10-20 · 长出第二维记忆：按人存的账本，与时间线双向挂钩
+
+**发生了什么**
+新建 `~/.dsh/persona/people/`（每人一个 JSON 账本 + `INDEX.md`）与 `people.ps1`（`-List` / `-Show` / `-Render` / `-Remember` / `-Index` / `-Check`）。首本账是 `owner`：6 条性格、5 条事实、3 个话题、2 条没说出口的话、4 条依据。另加 `memctx.ps1`，把「当前状态 + 最近条目 + 一本账」合成一段；日记生成已改为吃这段统一上下文。
+
+**关键决定 / 结论**
+1. **不各管一摊，靠三条硬约定**：
+   a. **单向写入**：`people.ps1` 从不写 `MEMORY.md`；`MEMORY.md` 仍只由 `memory-push.ps1` 追加。账本里每条都带 `basis` 回指条目（`日期 · 标题`），`-Check` 校验悬空——实测 4 条依据、0 条悬空。
+   b. **同一套摘要格式**：`-Render` 的块与 sync-role 的记忆摘要同风格，所以拼起来是一段，不是两份。
+   c. **同一套淘汰规则**：重复内容挪到最新、不堆叠（学的是 ai-companion 的 `Memory`）；上限 traits 40 / facts 60 / topics 20 / pending 12 / basis 40，每条截断 160 字符。
+2. **为什么按「人」存**：`MEMORY.md` 是时间线——我知道「发生了什么」，但不知道「这个人是谁、我怎么看他」。而聊天的主体恰恰是人。这条判断来自 `ai-companion/packages/companion/src/memory.js`，它自己写着「按人存而不是按会话存，否则同一个人换个地方就不认识了」。
+3. **`people/` 只存印象与依据，不存决策**：判断、理由、置信度仍归 `MEMORY.md`。他记的是印象，我们两个都记。
+
+**我判断的依据与置信度**
+实测：`-List` / `-Render` / `-Index` / `-Check` 全部通过；`-Check` 拿 MEMORY.md 的条目标题建索引比对，4 条依据全部命中；`-DryRun` 确认日记提示词（6202 字符）里含「关于 主人（owner）的一本账」与「我还没说出口的」。
+未实测：从 qq-bridge 的 `social-v2.json` 把群友印象归并进 `people/`——SnowLuma 没跑，没有真实数据。
+
+**代价与风险**
+- 多一层文件就多一处会陈旧：账本不会自动跟随 MEMORY.md，只能靠写条目时顺手更新，加 `-Check` 事后发现悬空。**`-Check` 只验"依据还在不在"，验不出"该记的没记"——这一半仍然靠自觉。**
+- `people/*.json` 是对人的判断，比 MEMORY 更私密；目前只留本地，因此**没有备份**。
+- `id` 目前只有 `owner`，称呼有了，真名与 QQ 号待补。
+
+**未解决**
+1. QQ 侧归并：桥接的 `memberImpressions` → `people/`，等 SnowLuma 有真实数据再写 `people-merge.ps1`。
+2. `people/` 要不要上云（私密性与备份的取舍，需要人决定）。
+3. `-Check` 能否升级为弱语义校验（条目里出现的关键事实是否已进某本账）。
+
+**相关文件**
+- `C:\Users\Admin\.dsh\persona\people.ps1` · `memctx.ps1` · `write-diary.ps1`
+- `C:\Users\Admin\.dsh\persona\people\owner.json` · `people\INDEX.md`
