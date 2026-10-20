@@ -31,6 +31,19 @@ Get-Content "$p\MEMORY.md" -Encoding UTF8 | Select-Object -First 40
 
 只要「当前状态」四行：最后更新 / 正在做的事 / 未完成的事 / 下一个我该知道的第一件事。
 
+### 记忆有三层，找的时候分开找
+
+| 层 | 在哪 | 用什么找 |
+|---|---|---|
+| 事实台账（生日、QQ 号、路径、版本这些稳定事实） | `facts.json` | 直接读，或 `memsearch -Query`（会带「事实·稳定」标记） |
+| 情景（某天发生了什么、决定了什么） | `MEMORY.md` 条目 | `memctx -Search <词>`（转发到 memsearch，BM25 打分 + 阈值） |
+| 画像（关于某个人的稳定认识） | `people/<id>.json` | `memctx -Person <id>` |
+
+- 检索**低于阈值会明说"没有足够匹配"**，那是诚实的回答，不要当成故障。
+- 想调排序或看为什么命中：`memsearch.ps1 -Query <词> -Explain` 会打印分数构成。
+- 改过检索就跑一次 `retrieval-bench.ps1`（10 条用例），别用"感觉"验收。
+- 设计说明见 `MEMORY-ARCHITECTURE.md`；它的分层与阈值借鉴自 MaiBot 的 A_Memorix。
+
 ## 三、什么时候存档（不必等对方说）
 
 满足任意一条即推送：

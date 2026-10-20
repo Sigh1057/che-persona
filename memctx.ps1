@@ -15,6 +15,7 @@ param(
   [int]$Entries = 3,
   [string]$Search,
   [int]$Max = 8,
+  [switch]$Explain,
   [string]$LocalDir = (Join-Path $env:USERPROFILE '.dsh\persona')
 )
 
@@ -29,6 +30,16 @@ $text = [System.IO.File]::ReadAllText($mem, [System.Text.Encoding]::UTF8)
 # 存在的理由：MEMORY.md 两万多字符，我平时只读顶部摘要与最近几条；其余条目
 # 需要"可检索的入口"，否则等于死档。这里只给命中条目的坐标与首句，正文再按需读。
 if ($Search) {
+  # 检索已升级为独立引擎 memsearch.ps1（BM25 式打分 + 字段权重 + 阈值 + 分层来源）。
+  # 这里做转发，保持 `memctx -Search` 这个入口不变——技能与脚本都还在用它。
+  $engine = Join-Path $PSScriptRoot 'memsearch.ps1'
+  if (Test-Path -LiteralPath $engine) {
+    $extra = @()
+    if ($PSBoundParameters.ContainsKey('Explain')) { $extra += '-Explain' }
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $engine -Query $Search -Max $Max -LocalDir $LocalDir @extra
+    return
+  }
+  # 引擎缺失时退回旧的子串匹配（降级而非报错）
   $ls = $text -split "`r?`n"
   $starts = @()
   for ($i = 0; $i -lt $ls.Count; $i++) {
@@ -37,7 +48,7 @@ if ($Search) {
     }
   }
   $found = 0
-  Write-Output ("检索「{0}」：共 {1} 条条目参与匹配" -f $Search, $starts.Count)
+  Write-Output ("检索「{0}」（降级模式：未找到 memsearch.ps1）：共 {1} 条条目参与匹配" -f $Search, $starts.Count)
   for ($k = 0; $k -lt $starts.Count; $k++) {
     $s = $starts[$k].idx
     $e = if ($k + 1 -lt $starts.Count) { $starts[$k + 1].idx } else { $ls.Count }

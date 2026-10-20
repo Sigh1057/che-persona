@@ -53,6 +53,20 @@ if (Test-Path -LiteralPath $index) {
   foreach ($l in $o) { Write-Log ('  [index] ' + $l) }
 } else { Write-Log '  [index] 跳过：找不到 index.ps1' }
 
+# 5) 检索回归（改了打分逻辑，要能立刻知道是变好还是变坏）
+$bench = Join-Path $here 'retrieval-bench.ps1'
+if (Test-Path -LiteralPath $bench) {
+  $o = & $ps @common $bench 2>&1
+  $code = $LASTEXITCODE
+  $summary = @($o | Where-Object { [string]$_ -match '检索评测' })
+  if ($summary.Count -gt 0) { Write-Log ('  [bench] ' + $summary[0]) }
+  else { Write-Log ('  [bench] 无输出（退出码 ' + $code + '）') }
+  if ($code -ne 0) {
+    Write-Log '  [bench] 检索评测未全过，质量下降'
+    foreach ($l in @($o | Where-Object { [string]$_ -match '不符合' })) { Write-Log ('  [bench] ' + $l) }
+  }
+} else { Write-Log '  [bench] 跳过：找不到 retrieval-bench.ps1' }
+
 # 日志轮转
 try {
   $all = Get-Content -LiteralPath $log -Encoding UTF8
