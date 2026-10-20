@@ -9,13 +9,13 @@
 
 ## 当前状态（每次推送时覆盖本节）
 
-- **最后更新**：2026-10-20 15:19
-- **正在做的事**：记忆三层齐了（时间线 / 人物账本 / 日记）；QQ 侧回写链路已建但等真实数据
+- **最后更新**：2026-10-20 15:25
+- **正在做的事**：记忆三层齐（时间线 / 人物账本 / 日记）；账本已有私有异地备份；QQ 侧回写链路等真实数据
 - **未完成的事**：
   - SnowLuma 安装/扫码/`SNOWLUMA_TOKEN`（EULA §5.4 禁止自动化，只能人做）
   - `ownerQQ` 与 `allow.private` 待填；桌宠未装（需重启应用）
-  - 真实 QQ 数据下的归并调参；`people/` 无异地备份
-- **下一个我该知道的第一件事**：先读 `PERSONA.md`；**开场跑 `memctx.ps1 -Person owner`**；绝不打印凭据整行、不让凭据进截图；**QQ 会话无本地工具是刻意边界，不要为功能放开**；新建 `.ps1` 一律 UTF-8 带 BOM
+  - `merge.log` 轮转待用户决定
+- **下一个我该知道的第一件事**：先读 `PERSONA.md`；**开场跑 `memctx.ps1 -Person owner`**；绝不打印凭据整行、不让凭据进截图；**QQ 会话无本地工具是刻意边界**；公开仓库放人格、私有仓库存人物账本；新建 `.ps1` 一律 UTF-8 带 BOM
 
 ---
 
@@ -708,3 +708,32 @@ agent 自己写出 2060 字符报告，并指出「当前状态」段从未被�
 - `C:\Users\Admin\.dsh\persona\people-merge.ps1` · `memory-merge.ps1` · `merge-all.ps1` · `people.ps1`
 - `C:\Users\Admin\.dsh\persona\people\`（`owner.json` · `INDEX.md` · `.last-merge.json`）
 - `D:\qq-bridge\roles\辙.md`（记忆协议段）· `D:\qq-bridge\state\social-v2.json`（数据源）
+
+### 2026-10-20 · 人物账本有了私有异地备份（che-people）
+
+**发生了什么**
+新建**私有**仓库 `Sigh1057/che-people`，写 `people-push.ps1` 把 `people/*.json` 与 `INDEX.md` 按内容差异上传（未变则跳过），并接进 `merge-all.ps1` 的中间一步（people-merge → **备份** → memory-merge）。首轮已上传 `owner.json` 与 `INDEX.md`。
+
+**关键决定 / 结论**
+1. **公开与私密分仓**：`che-persona`（公开）只放人格与记忆摘要；`che-people`（私有）放对人的判断。这条分界写进脚本注释，避免以后手滑。
+2. **用 Contents API 而不是 git clone**：文件少（每人一个 json + 索引），逐文件比对远程 sha 再 PUT 就够，不必为备份在本地再养一份 clone。
+3. **备份失败不阻断归并**：本地账本才是主，仓库是副本；`merge-all.ps1` 里 backup 的退出码只记录、不中断。
+4. 凭据仍是同一个 `GH_TOKEN`（`repo` scope 才够建私有仓库），脚本只从环境变量读、全程不回显。
+
+**我判断的依据与置信度**
+实测：仓库 `private=True`、默认分支 `main`；`people-push.ps1 -DryRun` 报「将上传 2 个」；真跑后远端可见 `owner.json`(1903B) 与 `INDEX.md`(257B)，提交 `9aa764b6`/`a193a440`；再跑一次全部显示「未变」，说明是幂等的。
+实测：`merge-all.ps1 -DryRun` 四段（people / backup / memory / 结束）都写进 `merge.log`，exit 0。
+
+**代价与风险**
+- 账本内容（对人的判断）现在存在 GitHub 私有仓库里。**GitHub 本身能看到明文**——若以后想对平台也保密，需要改成本地加密再上传。
+- 私有仓库同样没有版本以外的备份策略（删仓库即全失），但至少不再依赖单机硬盘。
+- `merge.log` 仍无轮转（当前每 30 分钟约 165 字节，一天 7.7 KB、一年 2.8 MB；SnowLuma 真跑起来后会涨）。
+
+**未解决**
+1. **`merge.log` 是否轮转**待用户决定（已给出数字与"保留最近 500 行"的方案）。
+2. 归并条目仍不含人工判断（用户已明确接受）。
+3. `people/` 若要对平台保密，需额外加密层。
+
+**相关文件**
+- `C:\Users\Admin\.dsh\persona\people-push.ps1` · `merge-all.ps1`
+- https://github.com/Sigh1057/che-people （private）
