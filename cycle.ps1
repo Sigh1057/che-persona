@@ -53,6 +53,12 @@ if (Test-Path -LiteralPath $index) {
   foreach ($l in $o) { Write-Log ('  [index] ' + $l) }
 } else { Write-Log '  [index] 跳过：找不到 index.ps1' }
 
+# 4b) 记忆宫殿重建（房间索引跟着记忆一起更新）
+$palace = Join-Path $here 'palace.ps1'
+if (Test-Path -LiteralPath $palace) {
+  $o = & $ps @common $palace -Rebuild 2>&1
+  foreach ($l in $o) { Write-Log ('  [palace] ' + $l) }
+} else { Write-Log '  [palace] 跳过：找不到 palace.ps1' }
 # 5) 检索回归（改了打分逻辑，要能立刻知道是变好还是变坏）
 $bench = Join-Path $here 'retrieval-bench.ps1'
 if (Test-Path -LiteralPath $bench) {

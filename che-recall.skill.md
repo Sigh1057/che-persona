@@ -42,7 +42,9 @@ Get-Content "$p\MEMORY.md" -Encoding UTF8 | Select-Object -First 40
 - 检索**低于阈值会明说"没有足够匹配"**，那是诚实的回答，不要当成故障。
 - 想调排序或看为什么命中：`memsearch.ps1 -Query <词> -Explain` 会打印分数构成。
 - 改过检索就跑一次 `retrieval-bench.ps1`（10 条用例），别用"感觉"验收。
-- 设计说明见 `MEMORY-ARCHITECTURE.md`；它的分层与阈值借鉴自 MaiBot 的 A_Memorix。
+- 想不起来在哪间屋子：`palace.ps1 -Map` 看地图，`palace.ps1 -Room <房间>` 走进去，
+  `palace.ps1 -Walk <关键词>` 按房间看命中分布。宫殿是视图，改记忆要改源再 `-Rebuild`。
+- 设计说明见 `MEMORY-ARCHITECTURE.md`；分层与阈值借鉴自 MaiBot 的 A_Memorix。
 
 ## 三、什么时候存档（不必等对方说）
 
