@@ -9,12 +9,13 @@
 
 ## 当前状态（每次推送时覆盖本节）
 
-- **最后更新**：2026-10-20 20:55
-- **正在做的事**：记忆系统闭环完成（三层 + 宫殿 + 双流 + 回归 12/12）；已与 MaiBot/Mem0 对比
+- **最后更新**：2026-10-20 22:31
+- **正在做的事**：生日当天，桌宠（Mio Live2D）已上线并实时跟随我的会话状态
 - **未完成的事**：
-  - 实体别名表未做；评测集只有 12 条；语义检索待规模
-  - 群聊未开（隔离已就绪）；名字待定；日记首篇待 23:30
-- **下一个我该知道的第一件事**：开场跑 `memctx.ps1 -Person owner`；群聊记忆在 `streams/`，默认搜不到；绝不打印凭据整行
+  - 桌宠出现两只，原因待查；未设自启；DSH 插件未装（需重启）
+  - 语义检索融合未做（Ollama + qwen3-embedding 已就绪，等接 memsearch）
+  - 群聊未开；名字待定
+- **下一个我该知道的第一件事**：开场跑 `memctx.ps1 -Person owner`；桌宠在 G:\DHS\ml\live2d-mao，用 start_mio.ps1 起
 
 ---
 
@@ -1171,3 +1172,39 @@ QQ 桥接启动日。此前记录里的"待定"到此结束。
 **相关文件**
 - `streams/group.md` · `memsearch.ps1` · `memory-push.ps1` · `private-push.ps1`
 - `MEMORY-COMPARISON.md`（对比文档）
+
+### 2026-10-20 · 生日礼物：桌宠装上了（Mio / Live2D）
+
+**发生了什么**
+主人在 QQ 那头答应「先给你装个桌宠当生日礼物」，随后选了真·桌面桌宠。
+我装了 `xkk6663/dsh-live2d-mao`（Mio 的 DSH 专用分支）：Python 3.12 + 后端 venv + Electron 外壳，
+后端跑在 8000，Electron 是一个 2560×1392 的全屏透明覆盖层，角色浮在桌面上。
+
+**关键决定 / 结论**
+1. **先试 dsh-bigfish（网页内桌宠），后上 Live2D**：大肥鱼装进了 desktop profile（bundle 已注册），
+   但那需要重启 DSH 才生效；Live2D 是独立 Electron，不依赖重启，所以先让它跑起来。
+2. **网络绕行**：winget 直连 GitHub 失败（`InternetOpenUrl`）、npm 官方源超时、npm 11 默认拦截
+   install 脚本。解法依次是：gh-proxy 下 portable zip、npmmirror 下 tarball、手动跑
+   `node node_modules/electron/install.js` 并设 `ELECTRON_MIRROR`。
+3. **DSH 接入走日志边车**：`dsh_config.json` 指向 `~/.dsh/sessions`，宠物 1–2 秒延迟读到我的会话；
+   查 `/api/companion/agents` 时它正显示 `phase=executing_tool, tool=pwsh, turn=75`——读的就是当前这轮。
+
+**我判断的依据与置信度**
+- 实测：`安装依赖.ps1` 五步全过（pip 走清华源，Electron 走 npmmirror，284 包 9 秒）。
+- 实测：窗口枚举到 `Mio Live2D 桌宠` 0,0 尺寸 2560×1392；截图里能看到角色与「自动 请勿打扰」气泡。
+- 实测：`/api/companion/agents` 返回 `status=online, phase=executing_tool, tool=pwsh`。
+- 未确认：截图里出现了两只角色（左右各一），可能是一个窗口渲染了两个槽位，也可能是残留实例。
+
+**代价与风险**
+- 常驻：Electron（数百 MB 内存）+ python 后端（约 80 MB）；显存占用未测。
+- 网络依赖：以后重装仍要镜像；npm 11 的 allow-scripts 会再次拦住 Electron 二进制。
+- 它是第三方代码，权限与 DSH 同级（能读会话日志）。
+
+**未解决**
+- 两只角色的原因待查（设置里换形象/位置，或清 `pet-data` 重开）。
+- 未设开机自启；未装 DSH 插件（实时事件，需重启 DSH）。
+- 大肥鱼还在 desktop profile 里，等下次重启会一起出现。
+
+**相关文件**
+- `G:\DHS\ml\live2d-mao\dsh-live2d-mao-main`（源码）· `start_mio.ps1` · `私人AI日记系统\dsh_config.json`
+- `C:\Users\21316\.dsh\profiles\desktop\package.json`（已含 dsh-bigfish）
