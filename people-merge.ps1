@@ -15,16 +15,20 @@
 #   .\people-merge.ps1             # 真的写进 people/
 [CmdletBinding()]
 param(
-  [string]$StatePath = 'D:\qq-bridge\state\social-v2.json',
+  [string]$StatePath = '',
   [string]$PeoplePs1 = (Join-Path $env:USERPROFILE '.dsh\persona\people.ps1'),
   [string]$Marker    = '[长期]',
   [switch]$All,
   [switch]$DryRun
 )
 
+# 跨机路径解析：不在脚本里硬编码本机路径。
+. (Join-Path $PSScriptRoot 'che-paths.ps1')
 $ErrorActionPreference = 'Stop'
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 
+if (-not $StatePath) { $StatePath = Resolve-QqBridgeState }
+if (-not $StatePath) { Write-Output '本机找不到 qq-bridge 状态文件（未安装或未运行），跳过归并。'; return }
 if (-not (Test-Path -LiteralPath $StatePath)) {
   Write-Output "找不到 QQ 侧状态文件：$StatePath（SnowLuma / qq-bridge 还没跑过？）"
   return

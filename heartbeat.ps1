@@ -32,6 +32,8 @@ param(
   [switch]$Quiet
 )
 
+# 跨机路径解析：不在脚本里硬编码本机路径。
+. (Join-Path $PSScriptRoot 'che-paths.ps1')
 $ErrorActionPreference = 'Continue'
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 $now = Get-Date
@@ -69,8 +71,8 @@ Log ('开始 runId=' + $now.ToString('yyyyMMddHHmmss'))
 
 # ---------- 1. 版本漂移 ----------
 function Get-RuntimeVersion {
-  $cli = 'G:\dsh\resources\runtime\cli\bin\dsh.cmd'
-  if (-not (Test-Path -LiteralPath $cli)) { return $null }
+  $cli = Resolve-DshCli
+  if (-not $cli) { return $null }
   try {
     $out = & $cli --version 2>$null
     if ($out) { return ([string]$out).Trim() }
@@ -79,8 +81,8 @@ function Get-RuntimeVersion {
 }
 
 $appVersion = $null
-$appVersionFile = 'G:\dsh\version'
-if (Test-Path -LiteralPath $appVersionFile) {
+$appVersionFile = Resolve-DshVersionFile
+if ($appVersionFile -and (Test-Path -LiteralPath $appVersionFile)) {
   $appVersion = ([System.IO.File]::ReadAllText($appVersionFile, [System.Text.Encoding]::UTF8)).Trim()
 }
 $runtimeVersion = Get-RuntimeVersion

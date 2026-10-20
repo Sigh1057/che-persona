@@ -19,6 +19,8 @@ param(
   [string]$CliPath  = ''
 )
 
+# 跨机路径解析：不在脚本里硬编码本机路径。
+. (Join-Path $PSScriptRoot 'che-paths.ps1')
 $ErrorActionPreference = 'Stop'
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 $now  = Get-Date
@@ -111,7 +113,7 @@ if ($DryRun) {
 # ── 3. 调 headless ─────────────────────────────────────────────────────────
 $cli = $CliPath
 if (-not $cli -or -not (Test-Path -LiteralPath $cli)) {
-  $cli = 'C:\Users\Admin\AppData\Local\Programs\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd'
+  $cli = Resolve-DshCli
 }
 if (-not (Test-Path -LiteralPath $cli)) {
   Log '失败：找不到 dsh CLI'

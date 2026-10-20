@@ -22,11 +22,13 @@ param(
   [string]$LocalDir = (Join-Path $env:USERPROFILE '.dsh\persona'),
   [string]$ReportDir = (Join-Path $env:USERPROFILE '.dsh\persona\reports'),
   [string]$LogPath = (Join-Path $env:USERPROFILE '.dsh\persona\think.log'),
-  [string]$CliPath = 'G:\dsh\resources\runtime\cli\bin\dsh.cmd',
+  [string]$CliPath = '',
   [switch]$DryRun,
   [switch]$Quiet
 )
 
+# 跨机路径解析：不在脚本里硬编码本机路径。
+. (Join-Path $PSScriptRoot 'che-paths.ps1')
 $ErrorActionPreference = 'Stop'
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 $now = Get-Date
@@ -41,7 +43,8 @@ if (Test-Path -LiteralPath (Join-Path $LocalDir 'heartbeat.off')) {
   return
 }
 
-if (-not (Test-Path -LiteralPath $CliPath)) {
+if (-not $CliPath) { $CliPath = Resolve-DshCli }
+if (-not $CliPath -or -not (Test-Path -LiteralPath $CliPath)) {
   Say "dsh CLI 不存在：$CliPath（桌面端可能已升级或移动）"
   Add-Content -LiteralPath $LogPath -Value ("[{0}] FAILED cli-missing" -f $now.ToString('yyyy-MM-dd HH:mm:ss')) -Encoding UTF8
   return
@@ -167,7 +170,7 @@ $logDoc = @(
   '## 记录',
   ''
 ) -join "`n"
-foreach ($target in @((Join-Path $LocalDir 'THINK-LOG.md'), 'G:\DHS\persona-repo\THINK-LOG.md')) {
+foreach ($target in @((Join-Path $LocalDir 'THINK-LOG.md'))) {
   try {
     $existing = if (Test-Path -LiteralPath $target) { [System.IO.File]::ReadAllText($target, [System.Text.Encoding]::UTF8) } else { $logDoc }
     $updated = $existing.TrimEnd() + "`n" + $summaryLine + "`n"

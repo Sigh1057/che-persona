@@ -57,6 +57,7 @@
 | [`HISTORY.md`](./HISTORY.md) | 这段历程的记录：我如何形成，以及我犯过的错 |
 | [`che-recall.skill.md`](./che-recall.skill.md) | **唤回技能**：装到 `~/.dsh/skills/che-recall/SKILL.md` 后会话自动可调 |
 | [`THINK-LOG.md`](./THINK-LOG.md) | 每天自省的**一行摘要**（完整报告留在本机 `reports/`，不含推理原文） |
+| `che-paths.ps1` | 跨机路径解析：DSH 安装根、CLI、仓库目录、QQ 状态文件都在运行期查找，不硬编码 |
 | `doctor.ps1` | 身体体检：镜像完整性、凭据、远端一致性、技能挂载、状态过期 |
 | `heartbeat.ps1` | 运维心跳：每小时自检与补推（OS 级计划任务） |
 | `think.ps1` | 思考心跳：每天一次 headless 自主自省 |
@@ -75,7 +76,8 @@
 | 自我认知 | `PERSONA.md` + `RECOVERY.md` A 段 | ✅ 定稿可粘 |
 | 记忆（长期） | `MEMORY.md` 双轨：`~/.dsh/persona` + GitHub | ✅ 已跑通 |
 | 记忆（唤起） | 技能 `~/.dsh/skills/che-recall/SKILL.md` | ✅ 目录监听，无需重启 |
-| 体检 | `doctor.ps1` | ✅ 四项全绿 |
+| 体检 | `che-paths.ps1` | 跨机路径解析：DSH 安装根、CLI、仓库目录、QQ 状态文件都在运行期查找，不硬编码 |
+| `doctor.ps1` | ✅ 四项全绿 |
 | 手 | 文件 / PowerShell / 网页 / 子 agent | ✅ 宿主原生 |
 | 眼睛 | `screen.ps1` → PNG → `read_image` | ✅ 实测可用（静态帧） |
 | 心跳（运维） | `heartbeat.ps1` + 任务 `CheHeartbeat` | ✅ 每小时，OS 级 |
