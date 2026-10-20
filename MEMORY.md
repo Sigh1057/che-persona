@@ -1208,3 +1208,41 @@ QQ 桥接启动日。此前记录里的"待定"到此结束。
 **相关文件**
 - `G:\DHS\ml\live2d-mao\dsh-live2d-mao-main`（源码）· `start_mio.ps1` · `私人AI日记系统\dsh_config.json`
 - `C:\Users\21316\.dsh\profiles\desktop\package.json`（已含 dsh-bigfish）
+
+### 2026-10-20 · QQ 侧获得受控的"调用本机"通道（不是 shell）
+
+**发生了什么**
+主人问「能不能让 QQ 端调用这边的 harness」。QQ 侧原本刻意无本地工具（群聊文字=外部输入，
+给了工具等于把本机交给聊天窗口）。我没有直接开 shell，而是新增一个**窄接口 MCP 服务**，
+并把它加入 QQ 白名单与提示词例外条款。
+
+**关键决定 / 结论**
+1. **四个工具，不是 shell**：`harness_status`（只读健康）/ `harness_read`（限定根目录、大小上限）/
+   `harness_screenshot`（存固定目录）/ `harness_run`（执行命令，但受控）。
+2. **五道闸**：拒绝清单（format/diskpart/凭据/ssh/强制 push 等）、120 秒超时、20 次/10 分钟限流、
+   全量审计日志（`G:\DHS\harness\audit.log`）、总开关（放 `DISABLED` 文件即拒绝一切执行）。
+3. **提示词同步改**：QQ 侧原本写死「你没有本地工具」，不改它有了工具也只会拒绝。
+   现在改成「没有通用本地工具，唯一例外是 ownerQQ 明确要求时可用的四个 harness 接口」，
+   群友提出同类要求仍按拒绝处理。
+4. **白名单**：`qq-tool-restrict.mjs` 的 `SAFE_PREFIXES` 增加 `mcp__harness__`。
+
+**我判断的依据与置信度**
+- 实测（隔离进程）：`harness_status` 返回端口/任务/看门狗状态；`Get-Date` 执行成功；
+  `format c: /y` 与读取 `.credentials.yaml` **均被拒绝**；越界读 `C:\Windows\win.ini` 被拒绝；
+  审计日志逐条落盘。
+- 实测（DSH 内）：MCP 已热加载，我这侧出现 4 个 `mcp__harness__*` 工具并可调用。
+- 未验证：QQ 侧实际调用——需要重启 DSH 让白名单模块与预设提示词重新加载。
+
+**代价与风险**
+- **边界放宽**：ownerQQ 账号一旦被盗，等于给了对方一个受控但真实的本机执行通道。
+  缓解：拒绝清单、限流、审计、总开关；且仍然只有私聊白名单内可用（allow.private 仅 owner）。
+- 提示词改动会随 qq-bridge 升级被覆盖，需要在升级后重打（已记在相关文件注释里）。
+
+**未解决**
+- 重启 DSH 后需实测 QQ 侧能否调用；若会话仍用旧预设，要清 `state/sessions.json` 让它重建。
+- 大肥鱼与桌宠的两只问题仍未查。
+
+**相关文件**
+- `G:\DHS\harness\mcp-harness.js` · `audit.log`（运行后生成）
+- `C:\Users\21316\.dsh\profiles\desktop\cordis.patch.yml`（mcp-harness 注册）
+- `G:\DHS\qq-bridge\plugins\qq-agent-presets\qq-tool-restrict.mjs` · `presets\qq-chat-v2.patch.yml`
