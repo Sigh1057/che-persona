@@ -93,6 +93,20 @@ if (Test-Path -LiteralPath $reportsDir) {
   }
 }
 
+# 2b) 事实台账（含 QQ 号与路径，属于私密内容，只进私有仓）
+$factsPath = Join-Path $LocalDir 'facts.json'
+if (Test-Path -LiteralPath $factsPath) {
+  $items += @{ Path = 'memory/facts.json'; Text = ([System.IO.File]::ReadAllText($factsPath, [System.Text.Encoding]::UTF8)) }
+}
+
+# 2c) 群聊流（streams/*.md）：只在群聊里发生的记忆，绝不进公开仓
+$streamsDir = Join-Path $LocalDir 'streams'
+if (Test-Path -LiteralPath $streamsDir) {
+  Get-ChildItem $streamsDir -File -Filter '*.md' | ForEach-Object {
+    $items += @{ Path = ('streams/' + $_.Name); Text = ([System.IO.File]::ReadAllText($_.FullName, [System.Text.Encoding]::UTF8)) }
+  }
+}
+
 # 3) QQ 侧状态（JSON 脱敏后推）
 if ($BridgeDir) {
   $stateDir = Join-Path $BridgeDir 'state'

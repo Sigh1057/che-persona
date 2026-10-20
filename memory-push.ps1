@@ -26,6 +26,9 @@ param(
   [string]$LocalDir = (Join-Path $env:USERPROFILE '.dsh\persona'),
   # Privacy escape hatch: private entries stay local and never reach the repo.
   [switch]$LocalOnly,
+  # 记忆流：main = 主档案（MEMORY.md，会推公开仓）；group 等 = streams/<流>.md，
+  # 只留本地并由 private-push 备份到私有仓，永不进公开仓。
+  [string]$Stream = 'main',
   # Replaces the "## 当前状态" section body before writing. The header claims
   # this section is overwritten on every push, so leaving it unset kept the
   # status frozen at an old date.
@@ -103,6 +106,23 @@ $subject = if ($heading) { ($heading -replace '^\s*###\s+', '').Trim() } else { 
 
 $localMemory = Join-Path $LocalDir 'MEMORY.md'
 $seedPath = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) 'MEMORY.md'
+
+# 群聊流：写进 streams/group.md，只留本地（由 private-push 备份到私有仓），
+# 绝不推公开仓——群聊里是别人说的话，不该进公开档案。
+if ($Stream -ne 'main') {
+  $streamPath = Join-Path $LocalDir ("streams\" + $Stream + '.md')
+  $streamDir = Split-Path -Parent $streamPath
+  if (-not (Test-Path -LiteralPath $streamDir)) { New-Item -ItemType Directory -Force -Path $streamDir | Out-Null }
+  $streamBase = Read-TextFile $streamPath
+  if ([string]::IsNullOrWhiteSpace($streamBase)) {
+    $streamBase = "# 群聊流（stream: $Stream）`n`n> 只在群聊里发生的记忆。默认不进主档案检索；由 private-push 备份到私有仓。`n`n## 记录`n"
+  }
+  $streamUpdated = Add-Entry $streamBase $body
+  Write-TextFile $streamPath $streamUpdated
+  Narrate (("已写入群聊流：{0}（{1} 字符）" -f $streamPath, $streamUpdated.Length)) 'Green'
+  Narrate '群聊流不推公开仓库（只进本地与私有备份）。' 'Yellow'
+  exit 0
+}
 
 # --- 2) LOCAL FIRST (never lose a memory to a network fault) -----------------
 $localBase = Read-TextFile $localMemory

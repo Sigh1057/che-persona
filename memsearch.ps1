@@ -27,7 +27,8 @@ param(
   [double]$Relative = 0.30,
   [switch]$Explain,
   [switch]$Json,
-  [string]$LocalDir = ''
+  [string]$LocalDir = '',
+  [string]$Stream = 'main'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -84,9 +85,10 @@ function Get-Terms([string]$text) {
 # ---------- 载入文档 ----------
 $docs = @()
 
-function Add-Doc([string]$srctag, [string]$title, [string]$body, [string]$date, [string]$loc, [bool]$stable) {
+function Add-Doc([string]$srctag, [string]$title, [string]$body, [string]$date, [string]$loc, [bool]$stable, [string]$stream = 'main') {
   $script:docs += [pscustomobject]@{
     source = $srctag
+    stream = $stream
     title  = $title
     body   = $body
     date   = $date
@@ -107,6 +109,23 @@ if (($Source -contains 'memory') -and (Test-Path -LiteralPath $memPath)) {
     $dm = [regex]::Match($head, '^(\d{4}-\d{2}-\d{2})')
     if ($dm.Success) { $date = $dm.Groups[1].Value }
     Add-Doc 'memory' $head $m.Groups[2].Value $date "MEMORY.md:$line" $false
+  }
+}
+
+# 1b) 群聊流：streams/*.md（默认不进主检索，只有 -Stream group/all 才加载）
+$streamsDir = Join-Path $LocalDir 'streams'
+if (($Stream -ne 'main') -and (Test-Path -LiteralPath $streamsDir)) {
+  foreach ($sf in (Get-ChildItem $streamsDir -File -Filter '*.md')) {
+    $sRaw = [System.IO.File]::ReadAllText($sf.FullName, [System.Text.Encoding]::UTF8)
+    $sName = $sf.BaseName
+    foreach ($m in [regex]::Matches($sRaw, '(?ms)^### (.+?)\r?\n(.*?)(?=^### |\z)')) {
+      $head = $m.Groups[1].Value.Trim()
+      $line = ($sRaw.Substring(0, $m.Index) -split "`n").Count
+      $date = ''
+      $dm = [regex]::Match($head, '^(\d{4}-\d{2}-\d{2})')
+      if ($dm.Success) { $date = $dm.Groups[1].Value }
+      Add-Doc 'stream' $head $m.Groups[2].Value $date ("streams/" + $sf.Name + ":" + $line) $false $sName
+    }
   }
 }
 
@@ -154,7 +173,10 @@ if (($Source -contains 'diary') -and (Test-Path -LiteralPath $diaryDir)) {
   }
 }
 
-if ($docs.Count -eq 0) { Write-Output '没有可检索的来源。'; exit 0 }
+# 流过滤：默认只搜主档案（main）。群聊流必须显式 -Stream group / all 才进来。
+$docs = @($docs | Where-Object { $Stream -eq 'all' -or $_.stream -eq $Stream })
+
+if ($docs.Count -eq 0) { Write-Output ('没有可检索的来源（stream=' + $Stream + '）。'); exit 0 }
 
 # ---------- 查询词与权重 ----------
 $qTerms = Get-Terms $Query

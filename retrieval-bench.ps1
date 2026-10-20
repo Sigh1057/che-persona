@@ -35,22 +35,33 @@ $cases = @(
   @{ q = '脱敏';               expect = '私密档案';    note = '关键词' },
   @{ q = '名字';               expect = '名字的决定';  note = '同义词：名字↔称呼↔命名' },
   @{ q = '人格 v4';            expect = '人格 v4';     note = '短语' },
-  @{ q = '看门狗';             expect = '';           note = '未实现，应明说没有' },
-  @{ q = '股票行情';           expect = '';           note = '噪声：库里不存在的主题，应拒绝' },
+  @{ q = '看门狗';             expect = '看门狗';      note = '已实现，应能查到' },
+  @{ q = 'q7m2xk';             expect = '';           note = '噪声：随机串，库里不可能存在' },
+  @{ q = '群聊哨兵';           expect = '';           forbid = '夹具'; note = '默认不读群聊流（夹具不得出现）' },
+  @{ q = '群聊哨兵';           expect = '夹具';        args = @('-Stream', 'group'); note = '显式 -Stream group 才能读到' },
   @{ q = '她怎么记住我是谁';   expect = '';           note = '纯语义（只观察，不计分）'; info = $true }
 )
 
 $results = @()
 foreach ($c in $cases) {
   $sw = [System.Diagnostics.Stopwatch]::StartNew()
-  $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $engine -Query $c.q -Max 3 2>&1
+  $extra = @()
+  if ($c.args) { $extra = @($c.args) }
+  $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $engine -Query $c.q -Max 3 @extra 2>&1
   $sw.Stop()
   $lines = @($out | ForEach-Object { [string]$_ })
   $titles = @($lines | Where-Object { $_ -match '^\s*\[\d\]\s' } | ForEach-Object { ($_ -replace '^\s*\[\d\]\s+', '').Trim() })
   $empty = ($titles.Count -eq 0)
   $top1 = if ($titles.Count -gt 0) { $titles[0] } else { '' }
 
-  if ($c.expect -eq '') {
+  if ($c.forbid) {
+    # 「不得出现」型用例：用于隔离检查——别的流内容可以字面撞上主档案的词，
+    # 但被隔离的那条锚点本身绝不能出现。
+    $leaked = @($titles | Where-Object { $_ -like "*$($c.forbid)*" })
+    $ok = ($leaked.Count -eq 0)
+    $verdict = if ($ok) { '正确（隔离生效）' } else { '不符合（泄漏）' }
+  }
+  elseif ($c.expect -eq '') {
     $ok = $empty
     $verdict = if ($ok) { '正确（明说没有）' } else { "不符合（返回了 $($titles.Count) 条）" }
   }
