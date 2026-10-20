@@ -9,13 +9,13 @@
 
 ## 当前状态（每次推送时覆盖本节）
 
-- **最后更新**：2026-10-20 14:50
-- **正在做的事**：记忆已长成两维（时间线 + 人物账本）；qq-bridge 待通电
+- **最后更新**：2026-10-20 15:19
+- **正在做的事**：记忆三层齐了（时间线 / 人物账本 / 日记）；QQ 侧回写链路已建但等真实数据
 - **未完成的事**：
   - SnowLuma 安装/扫码/`SNOWLUMA_TOKEN`（EULA §5.4 禁止自动化，只能人做）
   - `ownerQQ` 与 `allow.private` 待填；桌宠未装（需重启应用）
-  - QQ 侧印象归并进 `people/` 未做（缺真实数据）
-- **下一个我该知道的第一件事**：先读 `PERSONA.md`；**会话开场跑 `memctx.ps1 -Person owner` 一次拿到全部上下文**；绝不打印凭据整行、不让凭据进截图；**QQ 会话没有本地工具是刻意的安全边界**；新建 `.ps1` 一律写 UTF-8 带 BOM
+  - 真实 QQ 数据下的归并调参；`people/` 无异地备份
+- **下一个我该知道的第一件事**：先读 `PERSONA.md`；**开场跑 `memctx.ps1 -Person owner`**；绝不打印凭据整行、不让凭据进截图；**QQ 会话无本地工具是刻意边界，不要为功能放开**；新建 `.ps1` 一律 UTF-8 带 BOM
 
 ---
 
@@ -674,3 +674,37 @@ agent 自己写出 2060 字符报告，并指出「当前状态」段从未被�
 **相关文件**
 - `C:\Users\Admin\.dsh\persona\people.ps1` · `memctx.ps1` · `write-diary.ps1`
 - `C:\Users\Admin\.dsh\persona\people\owner.json` · `people\INDEX.md`
+
+### 2026-10-20 · QQ 侧记忆回写打通：桥接代写、一条等于一批
+
+**发生了什么**
+新增 `people-merge.ps1`（读 qq-bridge 的 `state/social-v2.json`）、`memory-merge.ps1`（把一批归并压成一条记忆条目，交 `memory-push -LocalOnly` 入档）、`merge-all.ps1`（串联两者，挂计划任务 `ChePeopleMerge` 每 30 分钟）。`people.ps1` 增加 `-Import` / `-DryRun`；角色卡新增「记忆协议」段，告诉 QQ 那边的我用 `[长期]` 前缀打标。
+
+**关键决定 / 结论**
+1. **不给 QQ 会话开任何权限**。群里任何人发的文字都是潜在注入，给文件或网络权限等于把本机交给群聊。所以"写入"由桥接侧脚本执行，QQ 那边的我只用现成的 `qq_memory_append` 打标——**读仍是注入、写变成打标，权限面一点没变**。
+2. **`[长期]` 是筛选协议**：只有带这个前缀的印象才提升进 `people/`，其余留在会话记忆里按 24h / 2h 自然过期。实测合成数据：提升 3 条、丢弃 2 条，并把丢弃样例打出来给人看。
+3. **一条 = 一批**：即使一天归并多次，也只产生一条记忆条目，git 历史不会退化成群聊日志（这是"每条消息都进 Git"这个想法唯一能落地的形状）。
+4. **两段式入档**：`people/` 只留本地（私密）→ 记忆条目进 `MEMORY.md`（本地）→ 每小时心跳推 GitHub。所以严格说「每条消息都进 Git」不成立，但「没有一条会丢」成立。
+
+**我判断的依据与置信度**
+实测：合成 `social-v2.json` 跑通全链（提升 3 / 丢弃 2 / 2 人入账 / 索引重建 / basis 悬空 0）；`merge-all.ps1 -DryRun` 在无 SnowLuma 数据时优雅空转（exit 0 且有日志）；`people.ps1 -Check` 只校验「日期 · 标题」回指，「QQ 观察」类来源标记不计悬空。
+未实测：真实 SnowLuma 数据下的归并质量与打标频率。
+
+**代价与风险**
+- 自动生成的记忆条目**不含人工判断**，只有搬运结果。若 QQ 侧打标过滥，长期记忆会朝"印象流水"退化；缓解手段只有角色卡里那句"只在真的值得记时才打"。
+- `people/` 仍无异地备份；`merge.log` 也没有轮转，长期会慢慢长。
+
+**又踩了三个 PowerShell 5.1 的坑（都值得记）**
+1. `$x | ConvertFrom-Json` 会把 JSON 数组当成**一个对象**返回；再套 `@()` 包一层，`foreach` 只迭代一次、`$p.id` 被拼成 `"a b"`。正确写法是直接赋值、不套 `@()`。
+2. `powershell.exe @opts -File <路径> -DryRun` 里 `-File` 后必须**紧跟**路径，额外开关要排在路径之后，否则报 "Processing -File '-DryRun' failed"。
+3. 用 .NET 读写带 BOM 的文件时要 `TrimStart([char]0xFEFF)` 再去写，否则会写出双重 BOM，PS 5.1 直接解析失败（`Unexpected attribute 'CmdletBinding'`）。
+
+**未解决**
+1. 真实数据下的调参：归并频率、`[长期]` 判定质量。
+2. `people/` 的备份策略。
+3. `merge.log` 轮转。
+
+**相关文件**
+- `C:\Users\Admin\.dsh\persona\people-merge.ps1` · `memory-merge.ps1` · `merge-all.ps1` · `people.ps1`
+- `C:\Users\Admin\.dsh\persona\people\`（`owner.json` · `INDEX.md` · `.last-merge.json`）
+- `D:\qq-bridge\roles\辙.md`（记忆协议段）· `D:\qq-bridge\state\social-v2.json`（数据源）
