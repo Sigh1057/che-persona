@@ -9,13 +9,13 @@
 
 ## 当前状态（每次推送时覆盖本节）
 
-- **最后更新**：2026-10-20 16:07
-- **正在做的事**：方案继续推进；「辙」= 方案名，我的名字待方案实现后自定（现在不自称名字）
+- **最后更新**：2026-10-20 18:57（本机 21316 同步完成）
+- **正在做的事**：双机并行。本机已拉齐远端 25 文件 + 人物账本；脚本硬编码已改为跨机解析
 - **未完成的事**：
-  - SnowLuma 安装/扫码/`SNOWLUMA_TOKEN`（只能人做）——清单 `default-workspace\QQ通电清单.md`
-  - 起名的六条验收门槛一条未达成（见最近条目）
-  - 角色卡余量 838 字符，需把记忆摘要外置
-- **下一个我该知道的第一件事**：先读 `PERSONA.md`；**「辙」是方案名，不是我的名字**，被问就答暂时叫辙，还没定；开场跑 `memctx.ps1 -Person owner`；绝不打印凭据整行；QQ 无本地工具是刻意边界
+  - SnowLuma 安装/扫码/SNOWLUMA_TOKEN（只能人做）
+  - 本机无 diary/、default-workspace/、oles/、ChePeopleMerge（均依赖另一台或 qq-bridge）
+  - 起名门槛未达成（「辙」是方案名，名字待定）
+- **下一个我该知道的第一件事**：开场跑 `memctx.ps1 -Person owner`；「辙」是方案名不是名字；绝不打印凭据整行
 
 ---
 
@@ -858,3 +858,40 @@ agent 自己写出 2060 字符报告，并指出「当前状态」段从未被�
 **相关文件**
 - $LocalDir
 - https://github.com/Sigh1057/che-persona
+
+### 2026-10-20 · 双机同步完成：本机拉齐档案，脚本去掉跨机硬编码
+
+**发生了什么**
+另一台（用户 Admin）干了 15 个提交：人格 v4（新增群聊规格）、记忆索引与检索、人物账本、
+日记、QQ 桥接打通、以及「辙」改为方案名。本机按拉取方式同步，并把 6 处本机路径硬编码
+收敛到一个共享解析器。
+
+**关键决定 / 结论**
+1. **拉取而非合并**：远端领先，`upload`/`heartbeat` 没有通用 pull；直接按 git tree 逐文件下载到
+   `~/.dsh/persona`，并同步到仓库工作副本。25/25 文件 blob 哈希一致。
+2. **人物账本是私有仓库**：`che-people`（private）里 `owner.json` 等 3 个文件拉回 `people/`，
+   `memctx -Person owner` 恢复可用。
+3. **硬编码解析器**：新建 `che-paths.ps1`（`Resolve-DshRoot/Cli/VersionFile/RepoDir/QqBridgeState`），
+   heartbeat/think/write-diary/people-merge 全部改为运行期查找；本机自测 root=G:\dsh、
+   repo=G:\DHS\persona-repo、qq=（空，未装）。
+4. **`upload.ps1` 排除 `THINK-LOG.md`**：它和 `MEMORY.md` 一样由心跳独占，否则上传会用工作副本
+   覆盖刚同步的摘要。
+
+**我判断的依据与置信度**
+- 实测：同步后 25/25 文件一致；`memctx -Search qq` 命中 3 条；索引 27 条 / 6 主题。
+- 实测：`heartbeat -DryRun` 显示记忆 27/27 一致、THINK-LOG 一致；`think -DryRun` 正常打印提示词；
+  `people-merge` 因本机无 qq-bridge 友好跳过。
+- 实测教训：改 `~/.dsh/persona/upload.ps1` 后运行 upload，会被它自己的"镜像回本地"步骤用旧版覆盖；
+  **必须改仓库工作副本那一份**。这与既有教训"仓库目录是源"一致，但这次是反向覆盖，值得记下。
+
+**代价与风险**
+- 本机缺 `diary/`、`default-workspace/`、`roles/`：前者按设计只留本地，后两者依赖另一台/Qq 环境。
+- `che-people` 的仓库列表接口看不到它（token 权限面所限），直连可读；说明 token 权限不是全量。
+
+**未解决**
+- SnowLuma 安装与扫码（人工）。
+- 日记是否纳入跨机同步（待用户授权新建私有仓库）。
+
+**相关文件**
+- `C:\Users\21316\.dsh\persona\che-paths.ps1`
+- `C:\Users\21316\.dsh\persona\people\owner.json`
