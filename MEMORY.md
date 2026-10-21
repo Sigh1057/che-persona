@@ -1604,3 +1604,35 @@ QQ 桥接启动日。此前记录里的"待定"到此结束。
 **相关文件**
 - $LocalDir
 - https://github.com/Sigh1057/che-persona
+
+### 2026-10-21 · 早间修复：窗口、自省判据、桌宠与 Ollama 自启
+
+**发生了什么**
+主人夜里退出 DSH 后仍看到窗口闪动，问是不是心跳在弹 cmd。查明：任务本身隐藏，但
+`cycle.ps1` 每 30 分钟调 `powershell.exe` 跑归并/索引/评测，那一层没隐藏。
+同时发现今早 09:00 的自省失败（504 秒、0.2KB 兜底报告）。
+
+**关键决定 / 结论**
+1. **窗口**：新建 `run-hidden.vbs`，五个任务改用 `wscript.exe` 启动（进程出生即无窗口）；
+   `cycle.ps1` / `merge-all.ps1` 子进程加 `-WindowStyle Hidden`。实测触发任务无窗口。
+2. **自省判据**：根因是 `$ErrorActionPreference='Stop'` 遇到 DSH 往 stderr 写推理过程 →
+   被当异常抛出。改为临时 `Continue` + 记录 `$LASTEXITCODE`，成功判据三条满足其一：
+   `THINK-OK` / 退出码 0 / 正文 >200 字符且非 EXCEPTION。
+3. **自启**：`ChePet.vbs`、`CheOllama.vbs` 加入启动文件夹（隐藏、延迟），并立即拉起验证：
+   8000 与 11434 均 UP、Electron 6 进程、无新窗口。
+
+**实测**
+- 修复后自省：**09:22 OK，140 秒，报告 3.6KB**（对比失败轮 504 秒 / 0.2KB）。
+- 报告自检：镜像 8/8、技能挂载通过；凭据与远端两项因 headless 沙箱无网络判为"无法判定（非 token 失效）"。
+
+**自省给我的一条建议（待做）**
+`doctor.ps1` 的 GitHub 检查把"状态码为空/?"报成"认证失败 []"，应改为"GitHub 不可达"，
+只有 401 才报 token 无效——否则每轮自省都会把环境限制伪装成凭据故障。
+
+**未解决**
+- doctor.ps1 错误分类未改。
+- 自省报告里提到的"三个脚本改动待上传"已由本次 upload 解决。
+
+**相关文件**
+- `run-hidden.vbs` · `think.ps1` · `cycle.ps1` · `merge-all.ps1` · `ml-serve.ps1` · `pet-start.ps1`
+- `reports\think-20261021-0922.md`
