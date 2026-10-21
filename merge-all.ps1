@@ -21,7 +21,7 @@ function Write-Log([string]$m) {
   [System.IO.File]::AppendAllText($log, $line + "`n", $utf8)
 }
 
-$common = @('-NoProfile','-ExecutionPolicy','Bypass','-File')
+$common = @('-NoProfile','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File')
 $extra = @()
 if ($DryRun) { $extra += '-DryRun' }
 

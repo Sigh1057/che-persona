@@ -13,7 +13,7 @@ param([switch]$Quiet)
 $ErrorActionPreference = 'Continue'
 $here = $PSScriptRoot
 $ps = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
-$common = @('-NoProfile','-ExecutionPolicy','Bypass','-File')
+$common = @('-NoProfile','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File')
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 $log = Join-Path $here 'cycle.log'
 

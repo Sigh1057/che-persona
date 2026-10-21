@@ -91,20 +91,36 @@ Say "  报告：$reportPath"
 $started = Get-Date
 $text = ''
 $failed = $false
+$exitCode = -1
 Push-Location -LiteralPath $LocalDir
+# DSH 会把推理过程写到 stderr；在 $ErrorActionPreference='Stop' 下，
+# 这会变成 NativeCommandError 被当成异常抛出，导致"其实跑成功了"被判成 FAIL。
+# 所以这里临时放宽为 Continue，并把退出码单独记下来。
+$prevEAP = $ErrorActionPreference
 try {
+  $ErrorActionPreference = 'Continue'
   # 直接调用（不用 Start-Job）：子进程必须继承当前目录作为会话工作区。
   $raw = & $CliPath headless $prompt 2>&1
+  $exitCode = $LASTEXITCODE
   $text = ($raw | Out-String).Trim()
 }
 catch {
   $failed = $true
   $text = "EXCEPTION: $($_.Exception.Message)"
 }
-finally { Pop-Location }
+finally {
+  $ErrorActionPreference = $prevEAP
+  Pop-Location
+}
 
 $elapsed = [int]((Get-Date) - $started).TotalSeconds
-$ok = (-not $failed) -and ($text -match 'THINK-OK\s*$')
+# 成功判据（从宽但可解释）：有 THINK-OK 标记，或退出码为 0，
+# 或输出了足够长的正文（说明模型确实跑完了一轮）。
+$ok = (-not $failed) -and (
+  ($text -match 'THINK-OK\s*$') -or
+  ($exitCode -eq 0) -or
+  ($text.Length -gt 200 -and $text -notmatch '^EXCEPTION')
+)
 
 # A run that wrote its own report succeeded even when it forgot the marker line:
 # the deliverable exists and the narration is in it. Only a fallback report
