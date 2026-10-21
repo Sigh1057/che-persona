@@ -130,6 +130,13 @@ if ($null -eq $localBase) {
   $localBase = Read-TextFile $seedPath
   if ($null -ne $localBase) { Narrate "本地镜像无 MEMORY.md，使用仓库种子：$($localBase.Length) 字符" }
 }
+# 留痕（PHILOSOPHY 7.4 / BEHAVIOR B25）：写入前登记意图，理由取记忆条目标题。
+$guard = Join-Path $LocalDir 'archive-guard.ps1'
+if (Test-Path -LiteralPath $guard) {
+  $title = ($body -split "`n" | Where-Object { $_ -match '^### ' } | Select-Object -First 1)
+  if (-not $title) { $title = '记忆追加' }
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $guard -Prepare -File MEMORY.md -Reason $title.Trim() -LocalDir $LocalDir 2>&1 | Out-Null
+}
 $localUpdated = Add-Entry $localBase $body
 if (-not [string]::IsNullOrWhiteSpace($State)) { $localUpdated = Set-CurrentState $localUpdated $State }
 Write-TextFile $localMemory $localUpdated

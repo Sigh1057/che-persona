@@ -102,9 +102,22 @@ else {
     if ($scopes -and $scopes -notmatch 'repo') { Bad "token 缺少 repo scope（当前：$scopes）" }
   }
   catch {
-    $code = try { $_.Exception.Response.StatusCode.value__ } catch { '?' }
-    Say '认证' "失败 [$code]"
-    if ($code -eq 401) { Bad 'token 无效或已过期（401）' } else { Bad "GitHub 认证失败 [$code]" }
+    # 区分"连不上"和"凭据不对"：状态码为空/'?' 说明请求根本没到 GitHub（DNS、代理、证书、沙箱断网），
+    # 那不是凭据结论。把环境限制报成 token 失效，会训练人忽略这项检查。
+    $code = try { $_.Exception.Response.StatusCode.value__ } catch { $null }
+    if ($null -eq $code -or $code -eq '?') {
+      Say '认证' '无法判定（GitHub 不可达）'
+      Say '原因' ($_.Exception.Message.Split([char]10)[0])
+      Say '提示' '网络或证书问题，与 token 无关；联网后重跑本项（不计入故障）。'
+    }
+    elseif ($code -eq 401) {
+      Say '认证' '失败 [401]'
+      Bad 'token 无效或已过期（401）'
+    }
+    else {
+      Say '认证' "失败 [$code]"
+      Bad "GitHub 认证失败 [$code]"
+    }
   }
 }
 

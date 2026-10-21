@@ -23,6 +23,7 @@ param(
   [string]$Text,
   [switch]$Emergency,
   [switch]$Init,
+  [switch]$Adopt,
   [string]$LocalDir = ''
 )
 
@@ -83,7 +84,7 @@ if ($Init) {
 }
 
 # ---------- 状态 ----------
-if ($Status -or (-not $Prepare -and -not $Audit -and -not $Dissent)) {
+if ($Status -or (-not $Prepare -and -not $Audit -and -not $Dissent -and -not $Init -and -not $Adopt)) {
   Write-Output '=== 核心档案门禁状态 ==='
   foreach ($f in $coreFiles) {
     $p = Join-Path $LocalDir $f
@@ -131,6 +132,20 @@ if ($Init) {
   Write-Output '已登记基线：四份核心档案的当前指纹作为起点。'
   exit 0
 }
+# ---------- 事后认领（用于"已经改了才发现要留痕"） ----------
+if ($Adopt) {
+  if (-not $File -or -not $Reason) { throw '需要 -File 与 -Reason' }
+  if ($coreFiles -notcontains $File) { throw ("只保护核心档案：" + ($coreFiles -join ' / ')) }
+  $fp = Join-Path $LocalDir $File
+  if (-not (Test-Path -LiteralPath $fp)) { throw "文件不存在：$fp" }
+  Set-Recorded $File ([pscustomobject]@{
+    hash = (Get-Sha $fp); at = (Get-Date).ToString('o');
+    reason = ('事后认领：' + $Reason); backup = ''; init = $false; adopted = $true
+  })
+  Write-State $state
+  Write-Output ("已事后认领：{0}`n  理由：{1}`n  当前指纹已作为新基线。" -f $File, $Reason)
+  exit 0
+}
 # ---------- 准备（留痕的意图） ----------
 if ($Prepare) {
   if (-not $File -or -not $Reason) { throw '需要 -File 与 -Reason' }
@@ -139,7 +154,8 @@ if ($Prepare) {
   if (-not (Test-Path -LiteralPath $target)) { throw "文件不存在：$target" }
 
   $rec = Get-Recorded $File
-  if ($rec -and -not $Emergency -and $rec.at -and -not $rec.init) {
+  $identityFiles = @('PERSONA.md','PHILOSOPHY.md','BEHAVIOR.md')
+  if ($rec -and -not $Emergency -and $rec.at -and -not $rec.init -and ($identityFiles -contains $File)) {
     $last = [datetime]::Parse($rec.at)
     $hours = ((Get-Date) - $last).TotalHours
     if ($hours -lt $cooldownHours) {
