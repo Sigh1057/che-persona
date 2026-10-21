@@ -1672,3 +1672,24 @@ QQ 桥接启动日。此前记录里的"待定"到此结束。
 
 **相关文件**
 - `doctor.ps1` · `archive-guard.ps1`（-Adopt / 冷却范围）· `memory-push.ps1`（自动留痕）
+
+### 2026-10-21 · 心跳告警
+
+**发生了什么**
+心跳从远端拉回了 25 条记忆
+
+**关键决定 / 结论**
+由 heartbeat.ps1 自动记录；本条属于异常事件，不是例行心跳。
+
+**我判断的依据与置信度**
+实测：心跳脚本运行日志 C:\Users\Admin\.dsh\persona\heartbeat.log；本地 26 条 / 远端 51 条。
+
+**代价与风险**
+若是版本漂移，语音插件补丁（settingsNamespace）可能已失效，需要复核。
+
+**未解决**
+见上。若为版本升级，需重新评估插件兼容性。
+
+**相关文件**
+- $LocalDir
+- https://github.com/Sigh1057/che-persona
