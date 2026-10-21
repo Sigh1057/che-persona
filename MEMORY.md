@@ -1979,3 +1979,31 @@ QQ 侧出现「安全提醒」，查明不是腾讯风控，是我自己的出�
 **代价**
 - 入戏久了会被当成"可爱但不用当真"——所以 B32 写了"严肃话题切回本人"。
 - 语气变轻，坏消息可能显得不够重——B32 第 4 条兜这个。
+
+### 2026-10-21 · 收工：换机重部署指南 + Coo 适配器进度
+
+**发生了什么**
+主人明天可能换电脑，要求把今天进度与重部署步骤写清楚。新增 `NEW-MACHINE.md`（换机部署清单），
+更新 `HANDOFF.md`，一起推到公开仓库（提交 `09cf9dc`）。
+
+**关键内容 / 结论**
+1. **NEW-MACHINE.md** 覆盖：底座安装 → 档案恢复（clone che-persona）→ 外设（ffmpeg/插件/Ollama）
+   → QQ 桥接（含今天的关键配置值）→ 5 个计划任务 + 3 个自启 → 四步验证 → **七个坑位对照表**。
+2. **今天的关键配置值**已写进去：`maxWakePerMinute=3`、`maxWakePerHour=60`、
+   `preSleepWaitEnabled=false`、`autoReplyCheckMs=120000`。
+3. **Coo 适配器进度**：`/v1/models` 通、`session.prompt` 能送进会话、**取回复不通**。
+   根因：DSH 没有 `session.get`（404），回复走 `events.mux` 事件流 + `createTurnCollector`。
+4. **明天照着做**：追 `openRemoteEventStream` 调用链 → 用 `trackTurnEvent` 的写法 → **先在测试会话跑通**，
+   别拿主会话试（写错会让会话永久"繁忙"，QQ 再也收不到消息）。
+
+**我判断的依据与置信度**
+- 实测：`session.get` → HTTP 404；`session.prompt` 无报错；`/v1/models` 200。
+- 实测：`createTurnCollector` 源码（turn/start → assistant/message → turn/end）与桥接里的两条不变量注释。
+- 未验证：事件流订阅的正确调用方式。
+
+**代价与风险**
+- 探针消息（"只说两个字：收到"）真的进了主会话——合并会话的副作用，已在 handoff 里注明。
+- 换机器后会话上下文会断，只能靠 HANDOFF.md 接；断代必须如实说，不许装作接上。
+
+**相关文件**
+- `C:\Users\21316\.dsh\persona\NEW-MACHINE.md` · `HANDOFF.md` · `G:\DHS\ml\coo-adapter.mjs`
