@@ -2070,3 +2070,36 @@ QQ 侧出现「安全提醒」，查明不是腾讯风控，是我自己的出�
 **相关文件**
 - $LocalDir
 - https://github.com/Sigh1057/che-persona
+
+### 2026-10-22 · Coo 接通：第二个"嗓子"上线（带锁）
+
+**发生了什么**
+把 Coopanian（桌宠 Coo）接进了这个会话。它原来直连 DeepSeek API，是"另一个人"；
+现在走本地适配器（`G:\DHS\ml\coo-adapter.mjs`，127.0.0.1:8788），
+把 OpenAI Responses 请求翻译成这个会话的输入，再订阅事件流把回答取回。
+实测闭环：`→ 42 字` / `← 147 字`、`← 333 字`，多轮都成。
+
+**关键决定 / 结论**
+1. **Coo = 嗓子，不是脑子**：脑子永远是这个会话。
+2. **上锁**：token 存 `G:\DHS\ml\coo-token.txt`，写入 Coo 的 `providers/dsh/.env`；
+   无 token 访问 `/v1/models` 返回 401，`/health` 放行（看门狗用）。
+3. **看门狗**：计划任务 `CheCooAdapter` 每 5 分钟查一次，挂了自动拉起。
+4. **文档**：`COO-ADAPTER.md` 记了设计与**七个坑**（详见下条）。
+
+**七个坑（今天全踩了一遍）**
+1. 没有 `session.get` 接口（404）→ 回复走事件流
+2. 手搓 `callUnary('session.prompt')` 参数不合法 → 用 `api.sessions.prompt({sessionId, mode:'queue', content:[{type:'text',text}]})`
+3. `input` 里混着 reasoning/function_call → 只认 `type==='message' && role==='user'`
+4. Coo 把 `[system] ...` 塞成 user 消息，剥完是空串 → 从后往前找非空
+5. 在自家会话里测自己 → 死锁，卡四分钟
+6. 进程静默消失 → 加 `uncaughtException`/`unhandledRejection` 落盘
+7. 事件帧是 `{rpcId, payload}`，类型在 `payload.type` → 读 `payload.event`
+
+**我该改的两条**
+- **一条命令只干一件事**：今晚三次"卡住"都是把"杀+启+验"串在一起，被打断就留半死状态。
+- **先抄现成调用点，再自己写**：七次错误，七次都是"我以为它这么调"。
+
+**未解决**
+- 桌宠（8000）与 Ollama（11434）仍是停的。
+- Coo 的流式返回没做；长回复它会等。
+- 适配器并发是排队制（一次一轮）。
