@@ -2049,3 +2049,24 @@ QQ 侧出现「安全提醒」，查明不是腾讯风控，是我自己的出�
 
 **相关文件**
 - `README.md` · `HISTORY.md` · `RECOVERY.md` · `MEMORY-INDEX.md` · `che-recall.skill.md` · `context-sync.ps1`
+
+### 2026-10-22 · 心跳告警
+
+**发生了什么**
+心跳从远端拉回了 6 条记忆
+
+**关键决定 / 结论**
+由 heartbeat.ps1 自动记录；本条属于异常事件，不是例行心跳。
+
+**我判断的依据与置信度**
+实测：心跳脚本运行日志 C:\Users\Admin\.dsh\persona\heartbeat.log；本地 58 条 / 远端 64 条。
+
+**代价与风险**
+若是版本漂移，语音插件补丁（settingsNamespace）可能已失效，需要复核。
+
+**未解决**
+见上。若为版本升级，需重新评估插件兼容性。
+
+**相关文件**
+- $LocalDir
+- https://github.com/Sigh1057/che-persona
