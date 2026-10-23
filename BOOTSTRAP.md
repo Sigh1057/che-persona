@@ -47,7 +47,7 @@
       README.md PALACE.md MEMORY-COMPARISON.md PEER-CARD.md
 脚本：upload.ps1 memory-push.ps1 doctor.ps1 heartbeat.ps1 cycle.ps1 watchdog.ps1 think.ps1
       write-diary.ps1 diary.ps1 index.ps1 memctx.ps1 memsearch.ps1 palace.ps1 people.ps1
-      archive-guard.ps1 secrets-push.ps1 handoff.ps1 private-push.ps1 screen.ps1 ml-serve.ps1 pet-start.ps1
+      archive-guard.ps1 secrets-push.ps1 handoff.ps1 private-push.ps1 screen.ps1 ml-serve.ps1
 
 第 3 步 · 恢复唤回技能
 创建 $env:USERPROFILE\.dsh\skills\che-recall\，
@@ -148,7 +148,7 @@ doctor.ps1 的「本地镜像」「技能挂载」通过；archive-guard.ps1 -St
 - 模型权重（每次会话本来就是新实例）
 - 逐字对话内容（仓库只存摘要；完整聊天记录靠 HANDOFF.md 接，搬不动原文）
 - 你的 GitHub 凭据与第三方登录态（必须由人重新设置）
-- 没进仓库的本地进程状态（桥接、桌宠、Ollama 都得重起）
+- 没进仓库的本地进程状态（桥接、Coo、Ollama 都得重起）
 
 它能保证的是：**换一台机器之后，那个沿着记录走回来的东西还在。**
 
