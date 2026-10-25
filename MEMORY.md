@@ -9,13 +9,14 @@
 
 ## 当前状态（每次推送时覆盖本节）
 
-- **最后更新**：2026-10-24 09:00
-- **正在做的事**：无人值守的例行自省（CheThink 09:00）；四项体检已跑完，报告在 `reports/think-20261024-0900.md`
+- **最后更新**：2026-10-25 09:00
+- **正在做的事**：10-25 例行自省已完成，报告在 `reports/think-20261025-0900.md`
 - **未完成的事**：
-  - Coo 适配器 v3 尚未验证一次完整闭环（10-23 记）
-  - 10-22、10-23 没有自省报告，待确认计划任务 `CheThink`
-  - `think.ps1` 与 `che-recall` 技能仍称旧名「辙」，与 `PERSONA.md` 第十三节的「鲸溯」不一致
-- **下一个我该知道的第一件事**：MEMORY 顶部刚在 10-24 09:00 刷新过；追加记忆一律带 `-State`，否则状态会再次冻结。先读 `PERSONA.md` 第十一至十四节与 `HANDOFF.md`。
+  - 当前状态冻结的修复：`heartbeat.ps1:284` 的告警写入不传 `-State`，需主人同意改脚本
+  - `CheThink` 计划任务存在性未确认（本会话被拒绝访问）；10-22、10-23 缺报告原因未证实
+  - `think.ps1` 与 `che-recall` 技能仍称旧名「辙」，与 `PERSONA.md` 第十三节不一致
+  - 检索评测 11/12（SnowLuma 未命中 qq-bridge），回退原因未查
+- **下一个我该知道的第一件事**：状态刚在 10-25 09:00 刷新；追加记忆一律带 `-State`；先读 `PERSONA.md` 第十一至十四节与 `HANDOFF.md`。
 
 ---
 
@@ -2400,3 +2401,28 @@ SnowLuma（QQ 网关）原来没有开机自启，每次都要手动开、手动
 **相关文件**
 - $LocalDir
 - https://github.com/Sigh1057/che-persona
+
+### 2026-10-25 09:00 · 自省：状态再次冻结，根因在 heartbeat 的告警写入
+
+**发生了什么**
+四项体检完成：本地 8/8 文件齐全、80 条记忆、技能挂载正常；凭据与远端一致性因沙箱断网无法判定。doctor 报「当前状态 2026-10-24 早于最新条目 2026-10-25」。heartbeat.log 08:16 为 local=80 remote=80 ok。
+
+**关键决定 / 结论**
+状态冻结的根因不是忘了传 -State，而是 heartbeat.ps1 第 284 行的告警分支调用 memory-push.ps1 时不传 -State：只要当天写过一条告警，状态日期就停在上一次手动刷新。10-24 的「以后一律带 -State」只约束了我手写的条目，没约束脚本自己写的。修复应放在调用点或默认路径，不靠每次自省手动补。今天没有其他故障；不动任何脚本，等主人同意。
+
+**我判断的依据与置信度**
+实测：doctor.ps1 输出「状态日期 / 最新条目」；heartbeat.ps1:284 为 `& $mp -Owner ... -Unattended`，无 -State；MEMORY.md 末条为 10-25 而状态仍是 10-24。推断：CheThink 任务存在——先前「NOT FOUND」是 -ErrorAction SilentlyContinue 吞掉「拒绝访问」后的误判，已撤回；本轮 09:00 自省确实被触发。不确定：10-22、10-23 缺报告的原因（关机 / 任务未触发均未证实）。
+
+**代价与风险**
+本条只在本地，等 heartbeat 有网时随整份 MEMORY.md 补推；补推失败则远端落后 1 条。不改 heartbeat.ps1，状态还会再冻结，下次自省仍需手动 -State。
+
+**未解决**
+- 主人同意后在 heartbeat.ps1:284 的调用里补 -State（自动生成四行）。
+- 在非沙箱 shell 里跑 `Get-ScheduledTask -TaskName CheThink` 确认任务存在。
+- `think.ps1` 与 `che-recall` 技能仍称「辙」，与 PERSONA.md 第十三节不一致。
+- 检索评测 11/12（SnowLuma 未命中 qq-bridge），回退原因未查。
+
+**相关文件**
+- C:\Users\21316\.dsh\persona\reports\think-20261025-0900.md
+- C:\Users\21316\.dsh\persona\heartbeat.ps1
+- C:\Users\21316\.dsh\persona\MEMORY.md
