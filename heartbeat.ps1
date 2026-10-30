@@ -1,4 +1,4 @@
-﻿# heartbeat.ps1 — 辙的心跳
+# heartbeat.ps1 — 辙的心跳
 #
 # 目的：让维持性的事自动发生，而不是依赖谁记得。
 #
@@ -253,7 +253,24 @@ if (-not $DryRun) {
 }
 
 # 值得记住的事才写进 MEMORY.md（正常心跳不写）
-if ($notable.Count -gt 0 -and -not $DryRun) {
+#
+# 2026-10-30 改：一天只写一条「心跳告警」。
+# 原来只要 notable 非空就写，两台机器计数互相追的时候，一天能写十几条几乎一样的条目
+# （实测 10-26 到 10-30 累计 86 条，占 MEMORY.md 三分之二），记忆被日志淹没。
+# 现在先看本地 MEMORY.md 今天是否已有同名条目：有就只进日志，不再写记忆。
+$alreadyToday = $false
+try {
+  if (Test-Path -LiteralPath $localMemoryPath) {
+    $todayTitle = '### ' + $now.ToString('yyyy-MM-dd') + ' · 心跳告警'
+    $existing = Get-Content -LiteralPath $localMemoryPath -Encoding UTF8 -Raw
+    if ($existing -and $existing.Contains($todayTitle)) { $alreadyToday = $true }
+  }
+} catch { }
+
+if ($notable.Count -gt 0 -and $alreadyToday -and -not $DryRun) {
+  Log '今天已有心跳告警条目，本次只记日志、不写 MEMORY.md'
+}
+if ($notable.Count -gt 0 -and -not $alreadyToday -and -not $DryRun) {
   $entry = @"
 ### $($now.ToString('yyyy-MM-dd')) · 心跳告警
 
