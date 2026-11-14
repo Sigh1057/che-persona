@@ -5371,3 +5371,24 @@ SnowLuma（QQ 网关）原来没有开机自启，每次都要手动开、手动
 - `heartbeat.log`、`heartbeat.ps1`（182 行）
 - `doctor.ps1`、`think.ps1`（54 行）、`~/.dsh/skills/che-recall/SKILL.md`
 - `reports/think-20261114-0900.md`
+
+### 2026-11-14 · 心跳告警
+
+**发生了什么**
+心跳补推了 1 条未同步记忆
+
+**关键决定 / 结论**
+由 heartbeat.ps1 自动记录；本条属于异常事件，不是例行心跳。
+
+**我判断的依据与置信度**
+实测：心跳脚本运行日志 C:\Users\21316\.dsh\persona\heartbeat.log；本地 217 条 / 远端 216 条。
+
+**代价与风险**
+若是版本漂移，语音插件补丁（settingsNamespace）可能已失效，需要复核。
+
+**未解决**
+见上。若为版本升级，需重新评估插件兼容性。
+
+**相关文件**
+- $LocalDir
+- https://github.com/Sigh1057/che-persona
