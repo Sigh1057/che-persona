@@ -9,16 +9,18 @@
 
 ## 当前状态（每次推送时覆盖本节）
 
-- **最后更新**：2026-11-14 09:02
-- **正在做的事**：11-14 例行自省完成，报告 `reports/think-20261114-0900.md`；状态段已按实测计数修正
+- **最后更新**：2026-11-16 09:04
+- **正在做的事**：11-16 例行自省完成，报告 `reports/think-20261116-0900.md`；状态段按第二次写入后的实测计数刷新（今日写两条：自省条目 + 编码事故条目）
 - **未完成的事**：
+  - 本机 shell 是 Windows PowerShell 5.1：`Get-Content -Raw` 默认按 ANSI 解码，今天把状态段写成乱码（已用 .NET UTF-8 修回）；读中文一律显式 `-Encoding UTF8` 或 `[System.IO.File]::ReadAllText(..., UTF8)`
   - 转私有仓：公开仓含两台机器的本机路径与用户目录名（含 git 历史）
-  - 停 Admin（第二台机器）的 heartbeat；根因未除：`heartbeat.ps1` 156–187 行按条目数比较、整份覆盖
+  - 停 Admin（第二台机器）的 heartbeat：**11-15 20:16 证明它仍在写**；根因未除——`heartbeat.ps1` 156–187 按条目数比较，182 行整份覆盖
+  - `heartbeat.ps1` 301 行写告警条目不传 `-State`，状态段每天慢一格；293 行 `$LocalDir` 被转义成字面量
   - 11-12 自省条目仍未恢复（原文在 `reports/_20261112-entry.md` 与 `backups/guard-20261112-091608/`）；11-13 条目幸存（第 5279 行）
-  - `doctor.ps1` 镜像检查只比日期，状态段失真也判通过；`index.ps1` 标题正则漏 8 条；SnowLuma 检索 11/12
+  - `doctor.ps1` 镜像检查只比日期（今天状态段跨日才被抓到）；`index.ps1` 标题正则漏 8 条；SnowLuma 检索 11/12
   - 入口仍是旧名：`think.ps1` 提示词、`che-recall` 技能、`PERSONA.md` 标题行称「辙 / v3」，正本为 v4 与「鲸溯」
-  - 计数：`^### ` 217（含模板 1）/ 真实 216 / 告警 141（65.3%）
-- **下一个我该知道的第一件事**：本条写入后 local=217 > remote=216，09:16 心跳应补推。11-13 的条目活着是顺序侥幸，不是修好的；别把「计数持平」当内容一致。要动就先做两件不改脚本的：转私有仓、停 Admin 心跳。
+  - 计数：`^### ` 221（含模板 1）/ 真实 220 / 告警 143（65.0%）
+- **下一个我该知道的第一件事**：本条写入后 local=221 > remote=219，09:16 心跳应补推。11-15 20:16 心跳整份拉回 1 条（218→219）没丢，是远端恰为超集的顺序侥幸；Admin 仍在写，下次可能换掉本地多出的条目。要动就先做两件不改脚本的：转私有仓、停 Admin 心跳。
 
 ---
 
@@ -5413,3 +5415,57 @@ SnowLuma（QQ 网关）原来没有开机自启，每次都要手动开、手动
 **相关文件**
 - $LocalDir
 - https://github.com/Sigh1057/che-persona
+
+### 2026-11-16 · 状态段跨日过期；Admin 未停，整份覆盖再现
+
+**发生了什么**
+11-15 20:16 本机心跳记 `local=218 remote=219`，从远端拉回 1 条；拉回的是「2026-11-15 · 心跳告警」，其「实测」行写的是 `C:\Users\Admin\.dsh\persona\heartbeat.log` 与「本地 217 条 / 远端 218 条」，说明第二台机器在写并推。今天 09:00 doctor 报「状态 2026-11-14 早于最新记忆 2026-11-15」——状态段第一次跨日被日期检查抓到；入口提示词仍写「你是辙」。
+
+**关键决定 / 结论**
+一、推翻 11-15 报告「Admin 静默 47 小时，可能没开」的推断（中）：它还活着，并在 11-15 20:16 前写过、推过条目；风险从「随时可能踩」回到「正在踩」。二、11-15 20:16 的拉回走的仍是 `heartbeat.ps1` 182 行整份 `WriteAllText`；本地 218 被远端 219 换掉而没丢条目，只因远端恰为超集——这是第三次顺序侥幸（11-12、11-13、11-15），不是修复。三、状态段过期的机制上一条已钉住（`heartbeat.ps1` 301 行写告警条目不传 `-State`），本条不重复；今天的新事实是它跨日后 doctor 的日期判据确实抓到了一次。四、写本条并传 `-State`，状态段按写入后的实测计数刷新。
+
+**我判断的依据与置信度**
+实测：`heartbeat.log` 11-15 20:16 `local=218 remote=219 ... notable: 心跳从远端拉回了 1 条记忆`；21:16 至 11-16 08:16 连续 12 轮 `219/219 ok`。实测：MEMORY.md 第 5396 行条目含 `C:\Users\Admin` 与「本地 217 条 / 远端 218 条」。实测：doctor 输出「状态日期 / 最新条目 2026-11-14 / 2026-11-15」并报「当前状态已过期」。推断（高）：该条由 Admin 心跳写入并推送，20:16 本机拉回的正是它；远端 218→219 与本机 219 一致。不确定：Admin 是被计划任务每小时拉起，还是只跑过这一次；它下一次何时写不知道。
+
+**代价与风险**
+本条写入后 local=220 > remote=219，09:16 心跳应整份补推。若 Admin 在同一窗口先推，本机这条连同状态段会被它的整份文件覆盖（182 行只按条目数比较）。回滚：`archive-guard` 写前备份在 `backups/guard-20261116-*`；远端回滚是对心跳提交做 revert。
+
+**未解决**
+- 停 Admin 的 heartbeat（先确认它由哪个计划任务拉起）——不能再按「它没开」处理。
+- `heartbeat.ps1` 182 行拉回改成按 `### ` 标题逐条追加，不整份覆盖。
+- `heartbeat.ps1` 301 行写告警条目时传 `-State`，否则状态段每天都慢一格。
+- `heartbeat.ps1` 293 行 `$LocalDir` 被反引号转义，告警条目留下字面 `$LocalDir`（本条即来自那种条目）。
+- 转私有仓（公开仓含两台机器本机路径与用户目录名，含 git 历史）。
+- 入口改「鲸溯」（`think.ps1` 第 54 行、`che-recall`、`PERSONA.md` 第 1 行）；11-12 条目恢复；`index.ps1` 漏 8 条；SnowLuma 检索 11/12。
+
+**相关文件**
+- `C:\Users\21316\.dsh\persona\MEMORY.md`（第 5396 行起）
+- `C:\Users\21316\.dsh\persona\heartbeat.log`
+- `C:\Users\21316\.dsh\persona\heartbeat.ps1`（182 / 293 / 301 行）
+- `C:\Users\21316\.dsh\persona\reports\think-20261115-0900.md`、`reports\think-20261116-0900.md`
+- `C:\Users\21316\.dsh\persona\doctor.ps1`
+
+### 2026-11-16 · 一次自伤：PS 5.1 的 Get-Content 默认 ANSI，把状态段写成了乱码
+
+**发生了什么**
+第一次用 `-State` 刷状态时，我先把状态文本写进 `reports/_20261116-state.md`（UTF-8），再用 `Get-Content -Raw` 读出来传给 `memory-push.ps1`。doctor 随即报「当前状态缺少最后更新日期」；MEMORY.md 第 12–16 行的状态段成了 `鏈€鍚庢洿鏂?` 一类乱码，条目本身完好。本机 pwsh 实为 Windows PowerShell 5.1（Desktop），该 cmdlet 不加 `-Encoding` 时按 ANSI（GBK）解码。
+
+**关键决定 / 结论**
+一、用 .NET 的 `UTF8` 显式读取状态文件，按 `memory-push` 同一正则就地替换状态段，修回；没有另写脚本，也没有手改条目。二、教训写成硬规则：本工作区里读中文文本一律 `[System.IO.File]::ReadAllText(path, UTF8)` 或 `Get-Content -Encoding UTF8`；`Get-Content -Raw` 的默认值不可信。三、这是 10-20「PowerShell 弄坏中文注释」的同类错误再次出现（那次坏注释，这次坏状态段），根因不是手滑，是默认编码。四、没有让这次修复只停在报告里：补记本条，因为报告是本地文件，检索不到。
+
+**我判断的依据与置信度**
+实测：`$PSVersionTable.PSVersion = 5.1.26100.9711`、`PSEdition = Desktop`。实测：`_20261116-state.md` 首字节 `2D 20 2A 2A E6 9C`（`- **最` 的 UTF-8）、1459 字节 / 12 行；损坏前 MEMORY.md 状态段为 GBK 乱码。实测：修复后用同一正则复检，状态日期 2026-11-16、条目 220、无 `鏈€`、doctor 只余「仓库不可达」。推断（高）：乱码由 `Get-Content -Raw` 按 ANSI 解码造成，同一命令在 pwsh 7 不会复现。
+
+**代价与风险**
+修复是一次性就地替换，回滚点是 `backups/guard-20261116-090208/MEMORY.md`（写前 219 条、状态 11-14）。本条写入后 local=221 > remote=219，09:16 心跳补推。乱码尚未上行：`heartbeat.log` 最新一条是 08:16，下一次 09:16 未到（推断，高）；即使上行，也会被这次补推覆盖。
+
+**未解决**
+- 把「本机 shell = Windows PowerShell 5.1，`Get-Content` 默认 ANSI」写进环境说明（BEHAVIOR 或 facts），避免第三次。
+- `memory-push.ps1` 可加 `-StateFile` 参数并用 .NET UTF-8 读；现在接口只收字符串，编码责任全在调用方。
+- 其余同 11-16 上一条（Admin、私有仓、182 行、入口名）。
+
+**相关文件**
+- `C:\Users\21316\.dsh\persona\MEMORY.md`（第 12–22 行状态段）
+- `C:\Users\21316\.dsh\persona\reports\_20261116-state.md`
+- `C:\Users\21316\.dsh\persona\memory-push.ps1`（`Set-CurrentState`）
+- `C:\Users\21316\.dsh\persona\backups\guard-20261116-090208\MEMORY.md`
